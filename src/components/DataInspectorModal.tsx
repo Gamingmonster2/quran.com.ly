@@ -1,7 +1,13 @@
-﻿import React, { useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { Download, FileJson, Copy, Check, ExternalLink, Code2, Database, Type } from 'lucide-react';
 import { Ayah, SurahMeta } from '../types/quran.ts';
 import { toArabicDigits } from '../utils/quranHelpers.ts';
+
+// حلقة تركيز موحّدة وواضحة لمستخدمي لوحة المفاتيح
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500';
+
+type DataTab = 'preview' | 'schema' | 'code' | 'fonts';
 
 interface DataInspectorProps {
   allVerses: Ayah[];
@@ -16,9 +22,82 @@ export const DataInspectorModal: React.FC<DataInspectorProps> = ({
   onClose,
   isModal = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'preview' | 'schema' | 'code' | 'fonts'>('preview');
+  const [activeTab, setActiveTab] = useState<DataTab>('preview');
   const [copiedCode, setCopiedCode] = useState(false);
   const [codeLang, setCodeLang] = useState<'javascript' | 'python' | 'curl' | 'flutter' | 'react-native' | 'css'>('javascript');
+
+  // معرّفات فريدة للربط الدلالي بين أقسام النافذة (العنوان، التبويبات، اللوحات)
+  const baseId = useId();
+  const titleId = `${baseId}-title`;
+  const tabId = (tab: DataTab) => `${baseId}-tab-${tab}`;
+  const panelId = (tab: DataTab) => `${baseId}-panel-${tab}`;
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // عند فتح النافذة المنبثقة: نقل التركيز إليها، حصر التنقل (Tab) داخلها،
+  // السماح بإغلاقها بمفتاح Escape، وإعادة التركيز إلى العنصر الذي فتحها عند الإغلاق.
+  useEffect(() => {
+    if (!isModal) return;
+    const dialogNode = dialogRef.current;
+    const previouslyFocused =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    dialogNode?.focus();
+
+    const getFocusableElements = (): HTMLElement[] => {
+      if (!dialogNode) return [];
+      return Array.from(
+        dialogNode.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), select:not([disabled]), textarea:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => element.offsetParent !== null);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (onClose) {
+          event.preventDefault();
+          onClose();
+        }
+        return;
+      }
+
+      if (event.key !== 'Tab' || !dialogNode) return;
+      const focusableElements = getFocusableElements();
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        dialogNode.focus();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      const activeElement = document.activeElement;
+
+      // إذا كان التركيز خارج النافذة لأي سبب، أعده إلى داخلها
+      if (!(activeElement instanceof Node) || !dialogNode.contains(activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? lastElement : firstElement).focus();
+        return;
+      }
+
+      if (event.shiftKey && (activeElement === firstElement || activeElement === dialogNode)) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (previouslyFocused && document.contains(previouslyFocused)) {
+        previouslyFocused.focus();
+      }
+    };
+  }, [isModal, onClose]);
 
   const sampleVerses = allVerses.slice(0, 7);
 
@@ -198,11 +277,17 @@ module.exports = {
       {/* Title & Stats */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-stone-200">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-stone-900 text-white flex items-center justify-center shrink-0">
+          <div
+            aria-hidden="true"
+            className="w-12 h-12 rounded-xl bg-stone-900 text-white flex items-center justify-center shrink-0"
+          >
             <Database className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold font-quran text-stone-900">
+            <h2
+              id={titleId}
+              className="text-xl sm:text-2xl font-bold font-quran text-stone-900"
+            >
               مستودع بيانات القرآن الكريم (quran.json)
             </h2>
             <p className="text-xs text-stone-500 font-sans mt-0.5">
@@ -212,21 +297,23 @@ module.exports = {
         </div>
 
         {/* Download Buttons Strip */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="تنزيل ملفات البيانات">
           <button
             onClick={() => downloadFile('/assets/data/quran.json', 'quran.json')}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-stone-900 hover:bg-stone-800 rounded-lg transition-colors shadow-xs"
+            aria-label="تنزيل ملف quran.json الكامل"
+            className={`inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-stone-900 hover:bg-stone-800 rounded-lg transition-colors shadow-xs ${FOCUS_RING}`}
           >
-            <Download className="w-3.5 h-3.5" />
+            <Download aria-hidden="true" className="w-3.5 h-3.5" />
             <span>تنزيل quran.json (١.٦ ميغابايت)</span>
           </button>
           <button
             onClick={() =>
               downloadFile('/assets/data/quran-by-surah.json', 'quran-by-surah.json')
             }
-            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-stone-700 bg-white border border-stone-200 hover:bg-stone-50 rounded-lg transition-colors shadow-2xs"
+            aria-label="تنزيل ملف البيانات المقسّم حسب السور"
+            className={`inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-stone-700 bg-white border border-stone-200 hover:bg-stone-50 rounded-lg transition-colors shadow-2xs ${FOCUS_RING}`}
           >
-            <FileJson className="w-3.5 h-3.5 text-stone-500" />
+            <FileJson aria-hidden="true" className="w-3.5 h-3.5 text-stone-500" />
             <span>مقسم حسب السور</span>
           </button>
         </div>
@@ -262,10 +349,18 @@ module.exports = {
 
       {/* Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-200 text-xs font-sans">
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          role="tablist"
+          aria-label="أقسام مستودع بيانات القرآن"
+          className="flex flex-wrap items-center gap-2"
+        >
           <button
+            role="tab"
+            id={tabId('preview')}
+            aria-selected={activeTab === 'preview'}
+            aria-controls={panelId('preview')}
             onClick={() => setActiveTab('preview')}
-            className={`pb-2.5 font-medium transition-colors border-b-2 ${
+            className={`pb-2.5 font-medium transition-colors border-b-2 ${FOCUS_RING} ${
               activeTab === 'preview'
                 ? 'border-stone-900 text-stone-950 font-bold'
                 : 'border-transparent text-stone-500 hover:text-stone-900'
@@ -274,8 +369,12 @@ module.exports = {
             معاينة البيانات (Live Preview)
           </button>
           <button
+            role="tab"
+            id={tabId('schema')}
+            aria-selected={activeTab === 'schema'}
+            aria-controls={panelId('schema')}
             onClick={() => setActiveTab('schema')}
-            className={`pb-2.5 font-medium transition-colors border-b-2 ${
+            className={`pb-2.5 font-medium transition-colors border-b-2 ${FOCUS_RING} ${
               activeTab === 'schema'
                 ? 'border-stone-900 text-stone-950 font-bold'
                 : 'border-transparent text-stone-500 hover:text-stone-900'
@@ -284,8 +383,12 @@ module.exports = {
             هيكلية الـ JSON (Schema)
           </button>
           <button
+            role="tab"
+            id={tabId('code')}
+            aria-selected={activeTab === 'code'}
+            aria-controls={panelId('code')}
             onClick={() => setActiveTab('code')}
-            className={`pb-2.5 font-medium transition-colors border-b-2 ${
+            className={`pb-2.5 font-medium transition-colors border-b-2 ${FOCUS_RING} ${
               activeTab === 'code'
                 ? 'border-stone-900 text-stone-950 font-bold'
                 : 'border-transparent text-stone-500 hover:text-stone-900'
@@ -294,13 +397,17 @@ module.exports = {
             أمثلة برمجية للاستخدام
           </button>
           <button
+            role="tab"
+            id={tabId('fonts')}
+            aria-selected={activeTab === 'fonts'}
+            aria-controls={panelId('fonts')}
             onClick={() => {
               setActiveTab('fonts');
               if (!['css', 'flutter', 'react-native'].includes(codeLang)) {
                 setCodeLang('css');
               }
             }}
-            className={`pb-2.5 font-medium transition-colors border-b-2 ${
+            className={`pb-2.5 font-medium transition-colors border-b-2 ${FOCUS_RING} ${
               activeTab === 'fonts'
                 ? 'border-stone-900 text-stone-950 font-bold'
                 : 'border-transparent text-stone-500 hover:text-stone-900'
@@ -311,28 +418,41 @@ module.exports = {
         </div>
 
         {(activeTab === 'code' || activeTab === 'fonts') && (
-          <button
-            onClick={handleCopyCode}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors"
-          >
-            {copiedCode ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-emerald-600" />
-                <span>تم النسخ!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-3.5 h-3.5" />
-                <span>نسخ الكود</span>
-              </>
-            )}
-          </button>
+          <>
+            <button
+              onClick={handleCopyCode}
+              title="نسخ مثال الكود إلى الحافظة"
+              aria-label="نسخ مثال الكود إلى الحافظة"
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors ${FOCUS_RING}`}
+            >
+              {copiedCode ? (
+                <>
+                  <Check aria-hidden="true" className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>تم النسخ!</span>
+                </>
+              ) : (
+                <>
+                  <Copy aria-hidden="true" className="w-3.5 h-3.5" />
+                  <span>نسخ الكود</span>
+                </>
+              )}
+            </button>
+            <span className="sr-only" role="status" aria-live="polite">
+              {copiedCode ? 'تم نسخ مثال الكود إلى الحافظة' : ''}
+            </span>
+          </>
         )}
       </div>
 
       {/* Tab 1: Live Preview */}
       {activeTab === 'preview' && (
-        <div className="space-y-2">
+        <div
+          role="tabpanel"
+          id={panelId('preview')}
+          aria-labelledby={tabId('preview')}
+          tabIndex={0}
+          className={`space-y-2 ${FOCUS_RING}`}
+        >
           <div className="text-xs text-stone-500 font-sans flex items-center justify-between">
             <span>عينة من أول ٧ آيات (سورة الفاتحة كاملة بالرسم العثماني):</span>
             <span className="font-mono text-stone-400">Array of Objects</span>
@@ -348,7 +468,13 @@ module.exports = {
 
       {/* Tab 2: Schema */}
       {activeTab === 'schema' && (
-        <div className="bg-white border border-stone-200/90 rounded-xl p-5 space-y-4 font-sans text-xs">
+        <div
+          role="tabpanel"
+          id={panelId('schema')}
+          aria-labelledby={tabId('schema')}
+          tabIndex={0}
+          className={`bg-white border border-stone-200/90 rounded-xl p-5 space-y-4 font-sans text-xs ${FOCUS_RING}`}
+        >
           <h4 className="font-bold text-stone-900 text-sm">
             مواصفات هيكل كل كائن آية في ملف quran.json:
           </h4>
@@ -391,8 +517,18 @@ module.exports = {
 
       {/* Tab 3: Code Snippets */}
       {activeTab === 'code' && (
-        <div className="space-y-3 font-sans">
-          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+        <div
+          role="tabpanel"
+          id={panelId('code')}
+          aria-labelledby={tabId('code')}
+          tabIndex={0}
+          className={`space-y-3 font-sans ${FOCUS_RING}`}
+        >
+          <div
+            role="group"
+            aria-label="لغة مثال الكود"
+            className="flex flex-wrap items-center gap-1.5 text-xs"
+          >
             {(
               [
                 ['javascript', 'JavaScript / Node.js'],
@@ -406,7 +542,8 @@ module.exports = {
               <button
                 key={lang}
                 onClick={() => setCodeLang(lang)}
-                className={`px-3 py-1 rounded-md transition-colors ${
+                aria-pressed={codeLang === lang}
+                className={`px-3 py-1 rounded-md transition-colors ${FOCUS_RING} ${
                   codeLang === lang
                     ? 'bg-stone-900 text-white font-semibold'
                     : 'bg-stone-100 text-stone-600 hover:text-stone-900'
@@ -428,7 +565,13 @@ module.exports = {
 
       {/* Tab 4: Fonts */}
       {activeTab === 'fonts' && (
-        <div className="space-y-5 font-sans text-xs">
+        <div
+          role="tabpanel"
+          id={panelId('fonts')}
+          aria-labelledby={tabId('fonts')}
+          tabIndex={0}
+          className={`space-y-5 font-sans text-xs ${FOCUS_RING}`}
+        >
           <div className="bg-[#FAF7F0] border border-stone-200/90 rounded-xl p-4">
             <h4 className="font-bold text-stone-900 text-sm">
               خطوط الرسم العثماني المضمّنة في التطبيق
@@ -449,7 +592,10 @@ module.exports = {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0">
+                    <div
+                      aria-hidden="true"
+                      className="w-8 h-8 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0"
+                    >
                       <Type className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
@@ -466,13 +612,15 @@ module.exports = {
                       }
                     }}
                     disabled={font.sizeKb === null}
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors shrink-0 ${
+                    title={`تنزيل ملف الخط ${font.name}`}
+                    aria-label={`تنزيل ملف الخط ${font.name}`}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors shrink-0 ${FOCUS_RING} ${
                       font.sizeKb === null
                         ? 'bg-stone-100 text-stone-400 cursor-not-allowed'
                         : 'bg-stone-900 text-white hover:bg-stone-800'
                     }`}
                   >
-                    <Download className="w-3 h-3" />
+                    <Download aria-hidden="true" className="w-3 h-3" />
                     <span>تنزيل</span>
                   </button>
                 </div>
@@ -502,7 +650,11 @@ module.exports = {
               <h4 className="font-bold text-stone-900 text-sm">
                 طريقة تعريف الخط في CSS و Flutter و React Native
               </h4>
-              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <div
+                role="group"
+                aria-label="لغة تعريف الخط"
+                className="flex flex-wrap items-center gap-1.5 text-xs"
+              >
                 {(
                   [
                     ['css', 'CSS @font-face'],
@@ -513,7 +665,8 @@ module.exports = {
                   <button
                     key={lang}
                     onClick={() => setCodeLang(lang)}
-                    className={`px-3 py-1 rounded-md transition-colors ${
+                    aria-pressed={codeLang === lang}
+                    className={`px-3 py-1 rounded-md transition-colors ${FOCUS_RING} ${
                       codeLang === lang
                         ? 'bg-stone-900 text-white font-semibold'
                         : 'bg-stone-100 text-stone-600 hover:text-stone-900'
@@ -540,11 +693,20 @@ module.exports = {
   if (isModal) {
     return (
       <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-        <div className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative">
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          tabIndex={-1}
+          className={`bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl relative ${FOCUS_RING}`}
+        >
           {onClose && (
             <button
               onClick={onClose}
-              className="absolute left-6 top-6 p-2 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors text-xs font-sans"
+              title="إغلاق النافذة"
+              aria-label="إغلاق نافذة مستودع بيانات القرآن"
+              className={`absolute left-6 top-6 p-2 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors text-xs font-sans ${FOCUS_RING}`}
             >
               إغلاق ✕
             </button>

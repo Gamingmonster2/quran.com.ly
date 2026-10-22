@@ -3,11 +3,12 @@ import { Download, Moon, Sun } from 'lucide-react';
 import { ThemeMode, ViewMode } from '../types/quran.ts';
 
 interface HeaderProps {
-  currentView: ViewMode;
+  currentView: ViewMode | null;
   onSelectView: (view: ViewMode) => void;
   onOpenDataModal: () => void;
   theme: ThemeMode;
   onSelectTheme: (theme: ThemeMode) => void;
+  onNavigateHome: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,13 +17,14 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDataModal,
   theme,
   onSelectTheme,
+  onNavigateHome,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-[#FBF9F5]/90 backdrop-blur-md border-b border-stone-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-3 sm:gap-8 h-16">
         {/* Zone 1: Single text element wordmark */}
         <button
-          onClick={() => onSelectView('surah')}
+          onClick={onNavigateHome}
           className="text-xl sm:text-2xl font-bold font-quran text-stone-900 whitespace-nowrap shrink-0 hover:text-emerald-900 transition-colors text-right"
         >
           القرآن الكريم بالرسم العثماني

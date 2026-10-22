@@ -3,6 +3,10 @@ import { Play, Pause, Copy, Check, Bookmark, BookmarkCheck } from 'lucide-react'
 import { Ayah, QuranFontChoice } from '../types/quran.ts';
 import { toArabicDigits, copyVerseToClipboard } from '../utils/quranHelpers.ts';
 
+// حلقة تركيز موحّدة وواضحة لمستخدمي لوحة المفاتيح
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500';
+
 interface VerseCardProps {
   ayah: Ayah;
   surahName: string;
@@ -35,8 +39,9 @@ export const VerseCard: React.FC<VerseCardProps> = ({
   };
 
   return (
-    <div
+    <article
       id={`ayah-${ayah.sura}-${ayah.aya}`}
+      aria-label={`الآية ${toArabicDigits(ayah.aya)} من سورة ${surahName}`}
       className={`p-5 sm:p-6 rounded-xl border transition-all ${
         isPlaying
           ? 'bg-amber-50/60 border-amber-300 shadow-sm'
@@ -58,48 +63,58 @@ export const VerseCard: React.FC<VerseCardProps> = ({
         </div>
 
         {/* Action icons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" role="group" aria-label="إجراءات الآية">
           <button
             onClick={() => onPlayAudio(ayah)}
             title={isPlaying ? 'إيقاف التلاوة' : 'استماع للتلاوة'}
-            className={`p-1.5 rounded-lg transition-colors ${
+            aria-label={isPlaying ? 'إيقاف تلاوة الآية' : 'تشغيل تلاوة الآية'}
+            className={`p-1.5 rounded-lg transition-colors ${FOCUS_RING} ${
               isPlaying
                 ? 'bg-amber-600 text-white'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
             }`}
           >
             {isPlaying ? (
-              <Pause className="w-4 h-4" />
+              <Pause aria-hidden="true" className="w-4 h-4" />
             ) : (
-              <Play className="w-4 h-4" />
+              <Play aria-hidden="true" className="w-4 h-4" />
             )}
           </button>
 
           <button
             onClick={handleCopy}
             title="نسخ الآية الكريمة"
-            className="p-1.5 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+            aria-label="نسخ الآية إلى الحافظة"
+            className={`p-1.5 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors ${FOCUS_RING}`}
           >
             {copied ? (
-              <Check className="w-4 h-4 text-emerald-600" />
+              <Check aria-hidden="true" className="w-4 h-4 text-emerald-600" />
             ) : (
-              <Copy className="w-4 h-4" />
+              <Copy aria-hidden="true" className="w-4 h-4" />
             )}
           </button>
+          <span className="sr-only" role="status" aria-live="polite">
+            {copied ? 'تم نسخ الآية إلى الحافظة' : ''}
+          </span>
 
           <button
             onClick={() => onToggleBookmark(ayah)}
             title={isBookmarked ? 'إزالة من المحفوظات' : 'حفظ الآية'}
-            className={`p-1.5 rounded-lg transition-colors ${
+            aria-label="حفظ الآية في المحفوظات"
+            aria-pressed={isBookmarked}
+            className={`p-1.5 rounded-lg transition-colors ${FOCUS_RING} ${
               isBookmarked
                 ? 'text-amber-600 bg-amber-50'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
             }`}
           >
             {isBookmarked ? (
-              <BookmarkCheck className="w-4 h-4 fill-amber-600 text-amber-600" />
+              <BookmarkCheck
+                aria-hidden="true"
+                className="w-4 h-4 fill-amber-600 text-amber-600"
+              />
             ) : (
-              <Bookmark className="w-4 h-4" />
+              <Bookmark aria-hidden="true" className="w-4 h-4" />
             )}
           </button>
         </div>
@@ -121,6 +136,6 @@ export const VerseCard: React.FC<VerseCardProps> = ({
           {toArabicDigits(ayah.aya)}
         </span>
       </div>
-    </div>
+    </article>
   );
 };

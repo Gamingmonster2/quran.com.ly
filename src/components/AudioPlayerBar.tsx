@@ -4,6 +4,10 @@ import { Ayah, SurahMeta } from '../types/quran.ts';
 import { toArabicDigits } from '../utils/quranHelpers.ts';
 import { RECITERS } from '../utils/reciters.ts';
 
+// حلقة تركيز موحّدة وواضحة لمستخدمي لوحة المفاتيح
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500';
+
 interface AudioPlayerBarProps {
   currentAyah: Ayah | null;
   currentSurah: SurahMeta | null;
@@ -38,20 +42,31 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
   const reciter = RECITERS.find((item) => item.id === reciterId) ?? RECITERS[0];
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200/90 shadow-lg px-4 py-3 sm:px-6">
+    <div
+      role="region"
+      aria-label="مشغل التلاوة الصوتية"
+      className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200/90 shadow-lg px-4 py-3 sm:px-6"
+    >
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 sm:gap-4">
         {/* Ayah & Surah details */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
-            <Volume2 className="w-5 h-5 animate-pulse" />
+            <Volume2 aria-hidden="true" className="w-5 h-5 animate-pulse" />
           </div>
           <div className="min-w-0 text-right">
-            <div className="text-sm font-bold font-quran text-stone-900 truncate">
+            <div
+              className="text-sm font-bold font-quran text-stone-900 truncate"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               سورة {currentSurah.name} · الآية {toArabicDigits(currentAyah.aya)}
             </div>
             {audioError ? (
-              <div className="flex items-center gap-1 text-xs text-red-700 truncate">
-                <AlertTriangle className="w-3 h-3 shrink-0" />
+              <div
+                role="alert"
+                className="flex items-center gap-1 text-xs text-red-700 truncate"
+              >
+                <AlertTriangle aria-hidden="true" className="w-3 h-3 shrink-0" />
                 <span className="truncate">{audioError}</span>
               </div>
             ) : (
@@ -71,7 +86,8 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
             value={reciterId}
             onChange={(e) => onSelectReciter(e.target.value)}
             title="اختيار القارئ"
-            className="hidden lg:block bg-white border border-stone-300 rounded-lg px-2 py-1.5 text-xs text-stone-800 focus:outline-none focus:ring-1 focus:ring-stone-800 max-w-[10rem]"
+            aria-label="اختيار القارئ"
+            className={`hidden lg:block bg-white border border-stone-300 rounded-lg px-2 py-1.5 text-xs text-stone-800 focus:outline-none focus:ring-1 focus:ring-stone-800 max-w-[10rem] ${FOCUS_RING}`}
           >
             {RECITERS.map((item) => (
               <option key={item.id} value={item.id}>
@@ -84,34 +100,38 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
           <button
             onClick={onToggleRepeat}
             title={repeatMode ? 'تكرار الآية مفعل' : 'تكرار الآية معطل'}
-            className={`p-2 rounded-lg transition-colors ${
+            aria-label="تكرار الآية"
+            aria-pressed={repeatMode}
+            className={`p-2 rounded-lg transition-colors ${FOCUS_RING} ${
               repeatMode
                 ? 'bg-amber-100 text-amber-800'
                 : 'text-stone-500 hover:text-stone-800 hover:bg-stone-100'
             }`}
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw aria-hidden="true" className="w-4 h-4" />
           </button>
 
           {/* Previous Ayah */}
           <button
             onClick={onPrevAyah}
             title="الآية السابقة"
-            className="p-2 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+            aria-label="الآية السابقة"
+            className={`p-2 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors ${FOCUS_RING}`}
           >
-            <SkipForward className="w-4 h-4" />
+            <SkipForward aria-hidden="true" className="w-4 h-4" />
           </button>
 
           {/* Play/Pause */}
           <button
             onClick={onTogglePlay}
-            className="w-10 h-10 rounded-full bg-stone-900 hover:bg-stone-800 text-white flex items-center justify-center shadow-xs transition-transform active:scale-95"
+            className={`w-10 h-10 rounded-full bg-stone-900 hover:bg-stone-800 text-white flex items-center justify-center shadow-xs transition-transform active:scale-95 ${FOCUS_RING}`}
             title={isPlaying ? 'إيقاف مؤقت' : 'تشغيل'}
+            aria-label={isPlaying ? 'إيقاف التلاوة مؤقتاً' : 'تشغيل التلاوة'}
           >
             {isPlaying ? (
-              <Pause className="w-5 h-5" />
+              <Pause aria-hidden="true" className="w-5 h-5" />
             ) : (
-              <Play className="w-5 h-5 mr-0.5" />
+              <Play aria-hidden="true" className="w-5 h-5 mr-0.5" />
             )}
           </button>
 
@@ -119,9 +139,10 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
           <button
             onClick={onNextAyah}
             title="الآية التالية"
-            className="p-2 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+            aria-label="الآية التالية"
+            className={`p-2 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors ${FOCUS_RING}`}
           >
-            <SkipBack className="w-4 h-4" />
+            <SkipBack aria-hidden="true" className="w-4 h-4" />
           </button>
         </div>
 
@@ -129,10 +150,11 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
         <div className="flex items-center shrink-0">
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+            className={`p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors ${FOCUS_RING}`}
             title="إغلاق المشغل"
+            aria-label="إغلاق مشغل التلاوة"
           >
-            <X className="w-4 h-4" />
+            <X aria-hidden="true" className="w-4 h-4" />
           </button>
         </div>
       </div>

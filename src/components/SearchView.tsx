@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Search, Play, ArrowLeft } from 'lucide-react';
 import { Ayah, SurahMeta } from '../types/quran.ts';
-import { normalizeArabicText, toArabicDigits } from '../utils/quranHelpers.ts';
+import { toArabicDigits } from '../utils/quranHelpers.ts';
+import { buildSearchIndex, searchAyahs } from '../utils/searchIndex.ts';
 
 interface SearchViewProps {
   allVerses: Ayah[];
@@ -25,32 +26,26 @@ export const SearchView: React.FC<SearchViewProps> = ({
     return map;
   }, [surahs]);
 
+  // فهرس البحث المقلوب: يُبنى مرة واحدة عند توفّر الآيات ثم يُعاد استخدامه
+  const searchIndex = useMemo(() => buildSearchIndex(allVerses), [allVerses]);
+
   const searchResults = useMemo(() => {
     const trimmed = searchTerm.trim();
     if (!trimmed || trimmed.length < 2) return [];
 
-    const normQuery = normalizeArabicText(trimmed);
+    const matches: { ayah: Ayah; surah: SurahMeta }[] = [];
+    const results = searchAyahs(searchIndex, trimmed, {
+      limit: 100,
+      surahId: selectedSurahFilter,
+    });
 
-    const matches: { ayah: Ayah; surah: SurahMeta; matchIndex: number }[] = [];
-
-    for (const ayah of allVerses) {
-      if (selectedSurahFilter !== 'all' && ayah.sura !== selectedSurahFilter) {
-        continue;
-      }
-
-      const normVerse = normalizeArabicText(ayah.text);
-      const idx = normVerse.indexOf(normQuery);
-      if (idx !== -1) {
-        const surah = surahMap.get(ayah.sura);
-        if (surah) {
-          matches.push({ ayah, surah, matchIndex: idx });
-          if (matches.length >= 100) break; // Cap at top 100 results for smooth performance
-        }
-      }
+    for (const { ayah } of results) {
+      const surah = surahMap.get(ayah.sura);
+      if (surah) matches.push({ ayah, surah });
     }
 
     return matches;
-  }, [allVerses, searchTerm, selectedSurahFilter, surahMap]);
+  }, [searchIndex, searchTerm, selectedSurahFilter, surahMap]);
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full">

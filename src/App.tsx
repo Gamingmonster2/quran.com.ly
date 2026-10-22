@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Ayah, SurahMeta, SurahWithVerses, Bookmark, ViewMode, ReadingDisplayMode, QuranFontChoice, ThemeMode } from './types/quran.ts';
 import { Header } from './components/Header.tsx';
 import { SurahList } from './components/SurahList.tsx';
@@ -7,22 +7,47 @@ import { SearchView } from './components/SearchView.tsx';
 import { BookmarksView } from './components/BookmarksView.tsx';
 import { DataInspectorModal } from './components/DataInspectorModal.tsx';
 import { AudioPlayerBar } from './components/AudioPlayerBar.tsx';
+import AboutPage from './pages/AboutPage.tsx';
+import SourcesPage from './pages/SourcesPage.tsx';
+import ContactPage from './pages/ContactPage.tsx';
+import {
+  Route,
+  isStaticPageRoute,
+  parseLocation,
+  routeToAbsoluteUrl,
+  routeToPath,
+  routeToView,
+} from './router.ts';
+import {
+  applyPageSeo,
+  buildSurahJsonLd,
+  buildWebPageJsonLd,
+} from './utils/seo.ts';
 import {
   computeAyahOffsets,
   getAyahAudioUrls,
   getGlobalAyahNumber,
+  toArabicDigits,
 } from './utils/quranHelpers.ts';
 import { DEFAULT_RECITER_ID, RECITERS, getReciter } from './utils/reciters.ts';
 
 const THEME_STORAGE_KEY = 'quran_theme';
 const RECITER_STORAGE_KEY = 'quran_reciter';
 
+const INITIAL_ROUTE: Route = parseLocation(window.location.pathname);
+const INITIAL_SURAH_ID =
+  INITIAL_ROUTE.name === 'surah' ? INITIAL_ROUTE.surahId : 1;
+
+const HOME_TITLE = 'القرآن الكريم بالرسم العثماني — مصحف إلكتروني وتلاوات | quran.com.ly';
+const HOME_DESCRIPTION =
+  'مصحف إلكتروني شامل وقاعدة بيانات مفتوحة المصدر للقرآن الكريم بالرسم العثماني على quran.com.ly: تلاوات صوتية بأصوات نخبة من القرّاء آية بآية، بحث فوري في ٦٢٣٦ آية بدون تشكيل، فهرس السور، أوضاع قراءة ليلية وبيج مريحة للعين، وتنزيل بيانات JSON.';
+
 export default function App() {
   const [surahs, setSurahs] = useState<SurahMeta[]>([]);
   const [allVerses, setAllVerses] = useState<Ayah[]>([]);
   const [bySurahMap, setBySurahMap] = useState<Map<number, SurahWithVerses>>(new Map());
-  const [selectedSurahId, setSelectedSurahId] = useState<number>(1);
-  const [currentView, setCurrentView] = useState<ViewMode>('surah');
+  const [route, setRoute] = useState<Route>(INITIAL_ROUTE);
+  const [selectedSurahId, setSelectedSurahId] = useState<number>(INITIAL_SURAH_ID);
   const [displayMode, setDisplayMode] = useState<ReadingDisplayMode>('verses');
   const [fontSize, setFontSize] = useState<number>(26);
   const [fontChoice, setFontChoice] = useState<QuranFontChoice>('uthman-taha');
@@ -77,12 +102,46 @@ export default function App() {
 
   const [isDataModalOpen, setIsDataModalOpen] = useState<boolean>(false);
 
+  /**
+   * ينقل المستخدم إلى مسار جديد ويحدّث سجل المتصفح (History API).
+   * كل التنقل داخل الموقع يمر من هنا.
+   */
+  const navigate = useCallback((next: Route, options: { replace?: boolean } = {}) => {
+    const nextPath = routeToPath(next);
+    if (window.location.pathname !== nextPath) {
+      if (options.replace) {
+        window.history.replaceState(null, '', nextPath);
+      } else {
+        window.history.pushState(null, '', nextPath);
+      }
+    }
+    setRoute(next);
+    if (next.name === 'surah') {
+      setSelectedSurahId(next.surahId);
+    }
+  }, []);
+
+  const navigateRef = useRef(navigate);
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
+
+  // مزامنة مسار المتصفح مع الحالة (زر الرجوع/التقدم)
+  useEffect(() => {
+    const handlePopState = () => {
+      const next = parseLocation(window.location.pathname);
+      setRoute(next);
+      if (next.name === 'surah') setSelectedSurahId(next.surahId);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   // Load Quran Datasets from public/assets/data/
   useEffect(() => {
     async function loadData() {
       try {
         setIsLoading(true);
-        // 1. Fetch Surahs index and full verses in parallel
         const [surahsRes, versesRes, bySurahRes] = await Promise.all([
           fetch('/assets/data/surahs.json'),
           fetch('/assets/data/quran.json'),
@@ -227,6 +286,7 @@ export default function App() {
 
       if (nextAyah.sura !== state.playingAyah?.sura) {
         setSelectedSurahId(nextAyah.sura);
+        navigateRef.current({ name: 'surah', surahId: nextAyah.sura });
       }
       setPlayingAyah(nextAyah);
 
@@ -291,6 +351,177 @@ export default function App() {
     ? surahs.find((s) => s.id === playingAyah.sura) || null
     : null;
   const currentReciter = getReciter(reciterId);
+  const currentView: ViewMode | null = routeToView(route);
+
+  // ------- تحديث بيانات SEO والبيانات المنظمة عند كل تنقل -------
+  useEffect(() => {
+    const path = routeToPath(route);
+
+    if (route.name === 'surah') {
+      const surahFull = bySurahMap.get(route.surahId);
+      const surah = surahFull ?? surahs.find((s) => s.id === route.surahId);
+      const isHome = path === '/';
+
+      if (!surah) {
+        applyPageSeo({
+          title: HOME_TITLE,
+          description: HOME_DESCRIPTION,
+          route,
+        });
+        return;
+      }
+
+      if (isHome) {
+        applyPageSeo({
+          title: HOME_TITLE,
+          description: HOME_DESCRIPTION,
+          route,
+          jsonLd: buildSurahJsonLd({ surah, url: routeToAbsoluteUrl(route) }),
+        });
+        return;
+      }
+
+      const surahType = surah.type === 'meccan' ? 'مكية' : 'مدنية';
+      const url = routeToAbsoluteUrl(route);
+
+      if (route.ayahId) {
+        const ayah = surahFull?.verses?.find(
+          (verse: Ayah) => verse.aya === route.ayahId
+        );
+        const ayahText = ayah?.text ?? '';
+        const snippet = ayahText.length > 120 ? `${ayahText.slice(0, 120)}…` : ayahText;
+        applyPageSeo({
+          title: `سورة ${surah.name} — الآية ${toArabicDigits(route.ayahId)} | القرآن الكريم بالرسم العثماني`,
+          description: snippet
+            ? `${snippet} — اقرأ الآية ${toArabicDigits(route.ayahId)} من سورة ${surah.name} بالرسم العثماني واستمع لها آية بآية على quran.com.ly.`
+            : `الآية ${toArabicDigits(route.ayahId)} من سورة ${surah.name} بالرسم العثماني على quran.com.ly.`,
+          route,
+          jsonLd: buildSurahJsonLd({
+            surah,
+            url,
+            ayahNumber: route.ayahId,
+            ayahText,
+          }),
+        });
+      } else {
+        applyPageSeo({
+          title: `سورة ${surah.name} — القرآن الكريم بالرسم العثماني | quran.com.ly`,
+          description: `سورة ${surah.name} (${surah.transliteration}) — سورة ${surahType}، عدد آياتها ${toArabicDigits(surah.total_verses)} آية بالرسم العثماني. اقرأها واستمع إليها آية بآية بأصوات نخبة من القرّاء على quran.com.ly.`,
+          route,
+          jsonLd: buildSurahJsonLd({ surah, url }),
+        });
+      }
+      return;
+    }
+
+    if (route.name === 'search') {
+      applyPageSeo({
+        title: 'البحث في آيات القرآن الكريم | quran.com.ly',
+        description:
+          'ابحث فورًا في آيات القرآن الكريم الـ٦٢٣٦ بالرسم العثماني، دون الحاجة إلى كتابة التشكيل، مع إمكانية الانتقال إلى الآية أو سماع تلاوتها.',
+        route,
+        robots: 'noindex, follow',
+        jsonLd: buildWebPageJsonLd('البحث في الآيات', 'بحث فوري في آيات القرآن الكريم.', route),
+      });
+      return;
+    }
+
+    if (route.name === 'bookmarks') {
+      applyPageSeo({
+        title: 'العلامات المحفوظة | quran.com.ly',
+        description: 'آياتك المحفوظة في القرآن الكريم للرجوع إليها لاحقًا، محفوظة محليًا في متصفحك.',
+        route,
+        robots: 'noindex, follow',
+      });
+      return;
+    }
+
+    if (route.name === 'data') {
+      applyPageSeo({
+        title: 'مستودع بيانات القرآن الكريم (JSON) | quran.com.ly',
+        description:
+          'تنزيل بيانات القرآن الكريم كاملة بالرسم العثماني بصيغة JSON (quran.json وquran-by-surah.json) مع هيكلية موثقة وأمثلة استخدام.',
+        route,
+        jsonLd: buildWebPageJsonLd(
+          'مستودع بيانات القرآن الكريم',
+          'بيانات القرآن الكريم كاملة بصيغة JSON مفتوحة المصدر.',
+          route
+        ),
+      });
+      return;
+    }
+
+    if (route.name === 'about') {
+      const title = 'عن المشروع | quran.com.ly';
+      const description =
+        'عن موقع quran.com.ly: قصة المشروع، صاحب المشروع، التقنيات المستخدمة، ترخيص MIT، وكيفية استمرار تطوير هذا المصحف الإلكتروني.';
+      applyPageSeo({ title, description, route, jsonLd: buildWebPageJsonLd(title, description, route) });
+      return;
+    }
+
+    if (route.name === 'sources') {
+      const title = 'المصادر والتراخيص | quran.com.ly';
+      const description =
+        'مصادر بيانات القرآن الكريم في quran.com.ly: نص quran-json بالرسم العثماني، تلاوات islamic.network، الخطوط والتراخيص.';
+      applyPageSeo({ title, description, route, jsonLd: buildWebPageJsonLd(title, description, route) });
+      return;
+    }
+
+    if (route.name === 'contact') {
+      const title = 'تواصل معنا | quran.com.ly';
+      const description = 'طرق التواصل مع فريق quran.com.ly عبر مستودع المشروع على GitHub ومسائل المشروع.';
+      applyPageSeo({ title, description, route, jsonLd: buildWebPageJsonLd(title, description, route) });
+      return;
+    }
+
+    applyPageSeo({
+      title: 'الصفحة غير موجودة | quran.com.ly',
+      description: 'الصفحة التي تبحث عنها غير موجودة. عد إلى فهرس السور لاستكشاف القرآن الكريم.',
+      route,
+      robots: 'noindex, follow',
+    });
+  }, [route, surahs, bySurahMap]);
+
+  // ------- التمرير تلقائيًا إلى آية محددة في الرابط -------
+  useEffect(() => {
+    if (route.name !== 'surah' || !route.ayahId || isLoading) return;
+    const timer = window.setTimeout(() => {
+      const element = document.getElementById(
+        `ayah-${route.surahId}-${route.ayahId}`
+      );
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [route, isLoading, bySurahMap]);
+
+  const handleSelectView = (view: ViewMode) => {
+    switch (view) {
+      case 'surah':
+        navigate({ name: 'surah', surahId: selectedSurahId });
+        break;
+      case 'search':
+        navigate({ name: 'search' });
+        break;
+      case 'bookmarks':
+        navigate({ name: 'bookmarks' });
+        break;
+      case 'data':
+        navigate({ name: 'data' });
+        break;
+    }
+  };
+
+  const handleSelectSurah = (id: number) => {
+    navigate({ name: 'surah', surahId: id });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpenAyah = (suraId: number, ayaNum: number) => {
+    navigate({ name: 'surah', surahId: suraId, ayahId: ayaNum });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handlePlayAyah = (ayah: Ayah) => {
     const audio = audioRef.current;
@@ -336,13 +567,15 @@ export default function App() {
     } else if (playingAyah.sura < 114) {
       const nextSurahObj = bySurahMap.get(playingAyah.sura + 1);
       if (nextSurahObj && nextSurahObj.verses.length > 0) {
-        setSelectedSurahId(nextSurahObj.id);
         nextAyah = nextSurahObj.verses[0];
       }
     }
 
     if (nextAyah) {
       setPlayingAyah(nextAyah);
+      if (nextAyah.sura !== playingAyah.sura) {
+        navigate({ name: 'surah', surahId: nextAyah.sura });
+      }
       loadAyahAudio(nextAyah);
       setIsPlaying(true);
     }
@@ -359,13 +592,15 @@ export default function App() {
     } else if (playingAyah.sura > 1) {
       const prevSurahObj = bySurahMap.get(playingAyah.sura - 1);
       if (prevSurahObj && prevSurahObj.verses.length > 0) {
-        setSelectedSurahId(prevSurahObj.id);
         prevAyah = prevSurahObj.verses[prevSurahObj.verses.length - 1];
       }
     }
 
     if (prevAyah) {
       setPlayingAyah(prevAyah);
+      if (prevAyah.sura !== playingAyah.sura) {
+        navigate({ name: 'surah', surahId: prevAyah.sura });
+      }
       loadAyahAudio(prevAyah);
       setIsPlaying(true);
     }
@@ -407,18 +642,25 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FBF9F5] text-stone-900 font-sans selection:bg-emerald-100 selection:text-emerald-900">
-      {/* Top Bar Contract (3 zones) */}
       <Header
         currentView={currentView}
-        onSelectView={(view) => setCurrentView(view)}
+        onSelectView={handleSelectView}
         onOpenDataModal={() => setIsDataModalOpen(true)}
         theme={theme}
         onSelectTheme={setTheme}
+        onNavigateHome={() => navigate({ name: 'surah', surahId: 1 })}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 flex overflow-hidden">
-        {isLoading ? (
+        {isStaticPageRoute(route) ? (
+          <>
+            {/* الصفحات التعريفية لا تحتاج بيانات القرآن فلا ينتظرها سبينر التحميل */}
+            {route.name === 'about' && <AboutPage />}
+            {route.name === 'sources' && <SourcesPage />}
+            {route.name === 'contact' && <ContactPage />}
+          </>
+        ) : isLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-4">
             <div className="w-10 h-10 border-3 border-stone-300 border-t-stone-800 rounded-full animate-spin" />
             <p className="font-quran text-lg text-stone-700">
@@ -437,20 +679,14 @@ export default function App() {
           </div>
         ) : (
           <>
-            {currentView === 'surah' && currentSurah && (
+            {route.name === 'surah' && currentSurah && (
               <div className="flex-1 flex flex-col md:flex-row w-full overflow-hidden">
-                {/* Surahs Index Sidebar */}
                 <SurahList
                   surahs={surahs}
                   selectedSurahId={selectedSurahId}
-                  onSelectSurah={(id) => {
-                    setSelectedSurahId(id);
-                    // scroll reader to top
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
+                  onSelectSurah={handleSelectSurah}
                 />
 
-                {/* Reader View */}
                 <ReaderView
                   surah={currentSurah}
                   fontSize={fontSize}
@@ -467,12 +703,12 @@ export default function App() {
                   onToggleBookmark={handleToggleBookmark}
                   onPrevSurah={
                     selectedSurahId > 1
-                      ? () => setSelectedSurahId(selectedSurahId - 1)
+                      ? () => handleSelectSurah(selectedSurahId - 1)
                       : undefined
                   }
                   onNextSurah={
                     selectedSurahId < 114
-                      ? () => setSelectedSurahId(selectedSurahId + 1)
+                      ? () => handleSelectSurah(selectedSurahId + 1)
                       : undefined
                   }
                   reciterId={reciterId}
@@ -481,33 +717,19 @@ export default function App() {
               </div>
             )}
 
-            {currentView === 'search' && (
+            {route.name === 'search' && (
               <SearchView
                 allVerses={allVerses}
                 surahs={surahs}
-                onSelectResult={(suraId, ayaNum) => {
-                  setSelectedSurahId(suraId);
-                  setCurrentView('surah');
-                  setTimeout(() => {
-                    const el = document.getElementById(`ayah-${suraId}-${ayaNum}`);
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }, 100);
-                }}
+                onSelectResult={(suraId, ayaNum) => handleOpenAyah(suraId, ayaNum)}
                 onPlayAyah={handlePlayAyah}
               />
             )}
 
-            {currentView === 'bookmarks' && (
+            {route.name === 'bookmarks' && (
               <BookmarksView
                 bookmarks={bookmarks}
-                onSelectBookmark={(suraId, ayaNum) => {
-                  setSelectedSurahId(suraId);
-                  setCurrentView('surah');
-                  setTimeout(() => {
-                    const el = document.getElementById(`ayah-${suraId}-${ayaNum}`);
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }, 100);
-                }}
+                onSelectBookmark={(suraId, ayaNum) => handleOpenAyah(suraId, ayaNum)}
                 onRemoveBookmark={(sura, aya) =>
                   setBookmarks((prev) =>
                     prev.filter((b) => !(b.sura === sura && b.aya === aya))
@@ -517,18 +739,35 @@ export default function App() {
               />
             )}
 
-            {currentView === 'data' && (
-              <DataInspectorModal
-                allVerses={allVerses}
-                surahs={surahs}
-                isModal={false}
-              />
+            {route.name === 'data' && (
+              <DataInspectorModal allVerses={allVerses} surahs={surahs} isModal={false} />
+            )}
+
+            {route.name === 'notFound' && (
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto w-full">
+                <div className="bg-white border border-stone-200/90 rounded-2xl p-8 sm:p-10 shadow-xs text-center space-y-4">
+                  <div className="text-5xl font-bold font-quran text-stone-300">٤٠٤</div>
+                  <h1 className="text-2xl font-bold font-quran text-stone-900">
+                    الصفحة غير موجودة
+                  </h1>
+                  <p className="text-sm text-stone-500 font-sans leading-relaxed">
+                    الرابط الذي فتحته غير صحيح أو أن الصفحة نُقلت. يمكنك العودة إلى فهرس
+                    السور لاستكشاف القرآن الكريم.
+                  </p>
+                  <button
+                    onClick={() => navigate({ name: 'surah', surahId: 1 })}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-stone-900 rounded-lg hover:bg-stone-800 transition-colors"
+                  >
+                    ← العودة إلى القرآن
+                  </button>
+                </div>
+              </div>
             )}
           </>
         )}
       </main>
 
-      {/* Footer: اسم النطاق والوصف لتحسين الظهور في محركات البحث */}
+      {/* Footer: اسم النطاق والوصف وروابط الصفحات التعريفية */}
       <footer className="shrink-0 border-t border-stone-200 bg-[#FAF7F0] px-4 py-3 font-sans">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-right">
           <div className="text-xs text-stone-600 leading-relaxed">
@@ -547,8 +786,42 @@ export default function App() {
           </div>
         </div>
 
+        {/* روابط الصفحات التعريفية */}
+        <nav
+          aria-label="صفحات الموقع"
+          className="max-w-7xl mx-auto mt-2 pt-2 border-t border-stone-200/70 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] sm:text-xs text-stone-500"
+        >
+          <button
+            onClick={() => navigate({ name: 'about' })}
+            className="hover:text-emerald-900 transition-colors"
+          >
+            عن المشروع
+          </button>
+          <span aria-hidden="true">·</span>
+          <button
+            onClick={() => navigate({ name: 'sources' })}
+            className="hover:text-emerald-900 transition-colors"
+          >
+            المصادر والتراخيص
+          </button>
+          <span aria-hidden="true">·</span>
+          <button
+            onClick={() => navigate({ name: 'contact' })}
+            className="hover:text-emerald-900 transition-colors"
+          >
+            تواصل معنا
+          </button>
+          <span aria-hidden="true">·</span>
+          <button
+            onClick={() => navigate({ name: 'data' })}
+            className="hover:text-emerald-900 transition-colors"
+          >
+            مستودع البيانات
+          </button>
+        </nav>
+
         {/* إشارة بسيطة إلى المساعدة الأولية في جلب ملفات البيانات */}
-        <div className="max-w-7xl mx-auto mt-2 pt-2 border-t border-stone-200/70 text-center text-[10px] sm:text-[11px] leading-relaxed text-stone-400">
+        <div className="max-w-7xl mx-auto mt-2 text-center text-[10px] sm:text-[11px] leading-relaxed text-stone-400">
           بدأ المشروع بمساعدة أدوات Google AI Studio في جلب بيانات القرآن بصيغة JSON، ثم أُكمل تطويره
           وصيانته من صاحب المشروع.
         </div>
