@@ -3,7 +3,7 @@
  * والبيانات المنظمة (JSON-LD) — تُحدَّث ديناميكيًا عند تغيير المسار.
  */
 import { SurahMeta } from '../types/quran.ts';
-import { SITE_URL, routeToAbsoluteUrl, Route } from '../router.ts';
+import { SITE_URL, routeToAbsoluteUrl, routeLang, withLang, Route } from '../router.ts';
 
 const OG_IMAGE = `${SITE_URL}/og-image.png`;
 const DEFAULT_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1';
@@ -39,21 +39,42 @@ function upsertLink(rel: string, href: string) {
   element.setAttribute('href', href);
 }
 
+/** يضيف/يحدّث رابط hreflang (نسخة اللغة الأخرى للصفحة) */
+function upsertAlternate(hreflang: string, href: string) {
+  const selector = `link[rel="alternate"][hreflang="${hreflang}"]`;
+  let element = document.head.querySelector<HTMLLinkElement>(selector);
+  if (!element) {
+    element = document.createElement('link');
+    element.setAttribute('rel', 'alternate');
+    element.setAttribute('hreflang', hreflang);
+    document.head.appendChild(element);
+  }
+  element.setAttribute('href', href);
+}
+
 export function applyPageSeo({ title, description, route, robots, jsonLd }: PageSeoInput) {
   const canonical = routeToAbsoluteUrl(route);
+  const lang = routeLang(route);
 
   document.title = title;
-  document.documentElement.setAttribute('lang', 'ar');
+  document.documentElement.setAttribute('lang', lang);
+  // الموقع عربي-أولًا؛ تبقى اتجاهية التخطيط RTL حتى في الواجهة الإنجليزية
   document.documentElement.setAttribute('dir', 'rtl');
 
   upsertMeta('name', 'description', description);
   upsertMeta('name', 'robots', robots ?? DEFAULT_ROBOTS);
   upsertLink('canonical', canonical);
 
+  // نسخ اللغتين لتحسين الفهرسة في محركات البحث
+  upsertAlternate('ar', routeToAbsoluteUrl(withLang(route, 'ar')));
+  upsertAlternate('en', routeToAbsoluteUrl(withLang(route, 'en')));
+  upsertAlternate('x-default', routeToAbsoluteUrl(withLang(route, 'ar')));
+
   upsertMeta('property', 'og:title', title);
   upsertMeta('property', 'og:description', description);
   upsertMeta('property', 'og:url', canonical);
   upsertMeta('property', 'og:image', OG_IMAGE);
+  upsertMeta('property', 'og:locale', lang === 'en' ? 'en_US' : 'ar_LY');
   upsertMeta('name', 'twitter:title', title);
   upsertMeta('name', 'twitter:description', description);
   upsertMeta('name', 'twitter:image', OG_IMAGE);

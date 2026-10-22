@@ -182,6 +182,16 @@ const FALLBACK_CSS = `
         text-align: justify;
         word-spacing: 0.05em;
       }
+      .prerender-fallback .prerender-ayah-translation {
+        margin: 0.55rem 0 0;
+        padding-top: 0.5rem;
+        border-top: 1px dashed #e7e0d8;
+        color: #57534e;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        font-size: 0.86rem;
+        line-height: 1.6;
+        text-align: left;
+      }
       .prerender-fallback .prerender-ayah-number {
         display: inline-flex;
         align-items: center;
@@ -773,6 +783,362 @@ const STATIC_PAGES = [
 ];
 
 // ---------------------------------------------------------------------------
+// النسخة الإنجليزية (i18n): صفحات السور + الصفحات التعريفية + الرئيسية
+// ---------------------------------------------------------------------------
+
+const HOME_TITLE_EN =
+  'The Holy Quran in Uthmani Script — digital mushaf & recitations | quran.com.ly';
+const HOME_DESCRIPTION_EN =
+  'A complete digital mushaf and open-source dataset of the Holy Quran in Uthmani script on quran.com.ly: verse-by-verse audio from renowned reciters, instant diacritics-insensitive search over 6,236 ayahs, Saheeh International English translation, and JSON data downloads.';
+
+const EN_COMMON_LINKS = [
+  { href: '/en', label: 'The Holy Quran — Home' },
+  { href: '/en/surah/2', label: 'Surah Al-Baqarah' },
+  { href: '/en/about', label: 'About the project' },
+  { href: '/en/api', label: 'Content API (JSON)' },
+  { href: '/en/sources', label: 'Sources & licenses' },
+  { href: '/en/data', label: 'Data repository' },
+];
+
+function enSurahTitle(surah) {
+  return surah.id === 1
+    ? HOME_TITLE_EN
+    : `Surah ${surah.transliteration} (${surah.name}) — The Holy Quran | quran.com.ly`;
+}
+
+function enSurahDescription(surah) {
+  if (surah.id === 1) return HOME_DESCRIPTION_EN;
+  const type = surah.type === 'meccan' ? 'Meccan' : 'Medinan';
+  return `Surah ${surah.transliteration} (${surah.name}) — a ${type} surah with ${surah.total_verses} verses in Uthmani script. Read it with the Saheeh International English translation and listen verse by verse from renowned reciters on quran.com.ly.`;
+}
+
+function buildSurahStructuredDataEn(surah, description, canonical) {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': ['Chapter', 'CreativeWork'],
+        '@id': `${SITE}/surah/${surah.id}#chapter`,
+        name: `سورة ${surah.name}`,
+        alternateName: [`Surah ${surah.transliteration}`, surah.transliteration],
+        position: surah.id,
+        inLanguage: 'ar',
+        url: canonical,
+        description,
+      },
+      {
+        '@type': 'Book',
+        '@id': `${SITE}/#book`,
+        name: 'The Holy Quran',
+        alternateName: 'القرآن الكريم',
+        inLanguage: 'ar',
+        url: `${SITE}/`,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE}/en` },
+          { '@type': 'ListItem', position: 2, name: 'Surahs', item: `${SITE}/en` },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: `Surah ${surah.transliteration}`,
+            item: canonical,
+          },
+        ],
+      },
+    ],
+  };
+}
+
+/** محتوى ثابت إنجليزي: نص الآية العربي + الترجمة الإنجليزية تحت كل آية. */
+function renderSurahFallbackHtmlEn(surah, translation, surahs) {
+  const translationsByAya = new Map();
+  for (const ayah of translation.ayahs ?? []) {
+    translationsByAya.set(ayah.aya, ayah.text);
+  }
+
+  const versesHtml = surah.verses
+    .map((verse) => {
+      const translationText = translationsByAya.get(verse.aya) ?? '';
+      return `            <article class="prerender-ayah" id="ayah-${surah.id}-${verse.aya}">
+              <p class="prerender-ayah-text" lang="ar" dir="rtl">${escapeHtml(
+                verse.text
+              )}<span class="prerender-ayah-number" aria-label="Ayah ${verse.aya}">${verse.aya}</span></p>
+              <p class="prerender-ayah-translation" lang="en" dir="ltr">${escapeHtml(
+                translationText
+              )}</p>
+            </article>`;
+    })
+    .join('\n');
+
+  const showBismillah = surah.id !== 9 && surah.id !== 1;
+  const bismillahHtml = showBismillah
+    ? `
+          <p class="prerender-bismillah" lang="ar" dir="rtl">بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</p>`
+    : '';
+
+  const index = surahs.findIndex((item) => item.id === surah.id);
+  const previousSurah = index > 0 ? surahs[index - 1] : null;
+  const nextSurah = index >= 0 && index < surahs.length - 1 ? surahs[index + 1] : null;
+  const type = surah.type === 'meccan' ? 'Meccan' : 'Medinan';
+
+  const links = [
+    { href: '/en', label: 'The Holy Quran — Home' },
+    ...(previousSurah
+      ? [{ href: `/en/surah/${previousSurah.id}`, label: `Previous surah: ${previousSurah.transliteration}` }]
+      : []),
+    ...(nextSurah
+      ? [{ href: `/en/surah/${nextSurah.id}`, label: `Next surah: ${nextSurah.transliteration}` }]
+      : []),
+    { href: '/en/api', label: 'Content API (JSON)' },
+    { href: '/en/about', label: 'About the project' },
+    { href: `/surah/${surah.id}`, label: 'العربية' },
+  ];
+
+  return `      <div class="prerender-fallback" dir="ltr" lang="en">
+        <div class="prerender-inner">
+          <header>
+            <p class="prerender-kicker">Surah no. ${surah.id} · ${escapeHtml(
+    surah.transliteration
+  )}</p>
+            <h1>Surah ${escapeHtml(surah.transliteration)} (${escapeHtml(surah.name)})</h1>
+            <p class="prerender-meta">${type} · ${surah.total_verses} verses · Uthmani script (Hafs)</p>
+          </header>
+          <p class="prerender-note">Static text version for reading, archiving and search engines — open the site in a modern browser for recitation, search and interactive features.</p>${bismillahHtml}
+          <div class="prerender-verses">
+${versesHtml}
+          </div>
+${renderNavLinks(links)}
+        </div>
+      </div>`;
+}
+
+/** محتوى ثابت إنجليزي للصفحات التعريفية. */
+function renderStaticFallbackHtmlEn(page) {
+  const paragraphs = page.paragraphs
+    .map((paragraph) => `            <p>${escapeHtml(paragraph)}</p>`)
+    .join('\n');
+
+  const sections = page.sections
+    .map(
+      (section) => `          <div class="prerender-card">
+            <h2>${escapeHtml(section.heading)}</h2>
+${section.paragraphs
+  .map((paragraph) => `            <p>${escapeHtml(paragraph)}</p>`)
+  .join('\n')}
+${section.codeLines
+  .map((codeLine) => `            <code class="prerender-code">${escapeHtml(codeLine)}</code>`)
+  .join('\n')}
+          </div>`
+    )
+    .join('\n');
+
+  return `      <div class="prerender-fallback" dir="ltr" lang="en">
+        <div class="prerender-inner">
+          <header>
+            <p class="prerender-kicker">quran.com.ly</p>
+            <h1>${escapeHtml(page.heading)}</h1>
+            <p class="prerender-meta">${escapeHtml(page.meta)}</p>
+          </header>
+${paragraphs}
+${sections}
+${renderNavLinks(page.links)}
+        </div>
+      </div>`;
+}
+
+/** يضيف روابط hreflang (عربي/إنجليزي/x-default) إلى رأس الصفحة. */
+function injectLanguageAlternates(html, arUrl, enUrl) {
+  if (html.includes('hreflang="en"')) return html;
+  const links = [
+    `<link rel="alternate" hreflang="ar" href="${escapeHtml(arUrl)}" />`,
+    `<link rel="alternate" hreflang="en" href="${escapeHtml(enUrl)}" />`,
+    `<link rel="alternate" hreflang="x-default" href="${escapeHtml(arUrl)}" />`,
+  ].join('\n    ');
+  return html.replace('</head>', `    ${links}\n  </head>`);
+}
+
+const EN_STATIC_PAGES = [
+  {
+    file: 'about.html',
+    slug: 'about',
+    title: 'About | quran.com.ly',
+    description:
+      'About quran.com.ly: an open-source digital mushaf and Quran dataset with recitations, instant search, English translation, tafsir and word-by-word meanings.',
+    heading: 'About the project',
+    meta: 'An open-source digital mushaf and dataset of the Holy Quran',
+    paragraphs: [
+      'quran.com.ly is an open-source digital mushaf and dataset of the Holy Quran in the Uthmani script (Hafs narration), featuring verse-by-verse audio from several reciters, instant Arabic search, surah index, English translation, Muyassar tafsir, word-by-word meanings, and JSON data downloads.',
+      'The project began with the help of Google AI Studio tools to fetch Quran data as JSON; all further development and maintenance is by the project owner. Code and data are public in the GitHub repository under the MIT license.',
+    ],
+    sections: [],
+    links: [
+      ...EN_COMMON_LINKS,
+      {
+        href: 'https://github.com/Gamingmonster2/quran.com.ly',
+        label: 'GitHub repository',
+        external: true,
+      },
+      { href: '/about', label: 'العربية' },
+    ],
+  },
+  {
+    file: 'sources.html',
+    slug: 'sources',
+    title: 'Sources & Licenses | quran.com.ly',
+    description:
+      'Data sources for quran.com.ly: quran-json Uthmani text, islamic.network recitations, embedded fonts and their licenses.',
+    heading: 'Sources & licenses',
+    meta: 'Where the Quran text, recitations and fonts of quran.com.ly come from',
+    paragraphs: [
+      'The site relies on open, publicly available sources, documenting their usage and licensing as thoroughly as possible.',
+    ],
+    sections: [
+      {
+        heading: 'Quran text',
+        paragraphs: [
+          'The Quran text (6,236 ayahs) in the Uthmani script is taken from the open-source quran-json project and served locally as JSON files within the site.',
+        ],
+        codeLines: [],
+      },
+      {
+        heading: 'Recitations',
+        paragraphs: [
+          'Verse-by-verse recitations are fetched from the islamic.network CDN for several well-known reciters; your reciter choice is saved in the browser.',
+        ],
+        codeLines: [],
+      },
+      {
+        heading: 'Fonts',
+        paragraphs: [
+          'KFGQPC fonts from the King Fahd Glorious Quran Printing Complex, and Amiri / Plus Jakarta Sans under the SIL Open Font License 1.1, all self-hosted instead of loading from external services.',
+        ],
+        codeLines: [],
+      },
+      {
+        heading: 'License',
+        paragraphs: [
+          'The site code is open source under the MIT license. Quran data remains subject to the original sources listed above.',
+        ],
+        codeLines: [],
+      },
+    ],
+    links: [...EN_COMMON_LINKS, { href: '/sources', label: 'العربية' }],
+  },
+  {
+    file: 'contact.html',
+    slug: 'contact',
+    title: 'Contact | quran.com.ly',
+    description: 'How to reach the quran.com.ly team via the GitHub repository and its issues board.',
+    heading: 'Contact',
+    meta: 'Suggestions, bug reports and development collaboration',
+    paragraphs: [
+      'To contact the quran.com.ly team, suggest an improvement, or report an issue with the text, recitation or interface, please use the GitHub repository issues board.',
+      'No official project email is published yet; GitHub remains the most transparent and reliable contact channel.',
+    ],
+    sections: [],
+    links: [
+      ...EN_COMMON_LINKS,
+      {
+        href: 'https://github.com/Gamingmonster2/quran.com.ly',
+        label: 'GitHub repository',
+        external: true,
+      },
+      {
+        href: 'https://github.com/Gamingmonster2/quran.com.ly/issues',
+        label: 'Issue tracker',
+        external: true,
+      },
+      { href: '/contact', label: 'العربية' },
+    ],
+  },
+  {
+    file: 'data.html',
+    slug: 'data',
+    title: 'Quran Data Repository (JSON) | quran.com.ly',
+    description:
+      'Download the complete Holy Quran dataset in Uthmani script as JSON (quran.json and quran-by-surah.json) with documented schema and usage examples.',
+    heading: 'Quran Data Repository (JSON)',
+    meta: 'The complete Quran dataset as static JSON — a static Content API',
+    paragraphs: [
+      'The complete Quran dataset (6,236 ayahs) in the Uthmani script is available as JSON for use in applications and websites, with CORS enabled from any origin.',
+    ],
+    sections: [
+      {
+        heading: 'Available files',
+        paragraphs: ['Static Content API endpoints you can request directly:'],
+        codeLines: [
+          '/assets/data/quran.json — 6,236 flat ayahs { sura, aya, text }',
+          '/assets/data/quran-by-surah.json — ayahs grouped by surah',
+          '/assets/data/surahs.json — surah index (name, type, verse count)',
+        ],
+      },
+      {
+        heading: 'Additional content',
+        paragraphs: [
+          'Per-surah content is also available: Saheeh International English translation, Muyassar Arabic tafsir, and word-by-word meanings.',
+        ],
+        codeLines: [
+          '/assets/data/translations/en-sahih-international/{1..114}.json',
+          '/assets/data/tafsir/muyassar/{1..114}.json',
+          '/assets/data/words/{1..114}.json',
+        ],
+      },
+    ],
+    links: [
+      ...EN_COMMON_LINKS,
+      { href: '/assets/data/quran.json', label: 'Download quran.json' },
+      { href: '/assets/data/quran-by-surah.json', label: 'Download quran-by-surah.json' },
+      { href: '/assets/data/surahs.json', label: 'Download surahs.json' },
+      { href: '/en/api', label: 'API documentation' },
+    ],
+  },
+  {
+    file: 'api.html',
+    slug: 'api',
+    title: 'Content API | quran.com.ly',
+    description:
+      'The complete Holy Quran dataset (Arabic text, English translation, tafsir, word by word) as static JSON files with open CORS and full documentation.',
+    heading: 'Content API',
+    meta: 'Open static JSON endpoints for the Holy Quran dataset',
+    paragraphs: [
+      'All site data is exposed as static JSON files on the same domain, with no API keys and no rate limits, and CORS enabled for any application or website.',
+    ],
+    sections: [
+      {
+        heading: 'Endpoints',
+        paragraphs: ['Fetch any of these endpoints directly from your app:'],
+        codeLines: [
+          'GET /assets/data/surahs.json',
+          'GET /assets/data/quran.json',
+          'GET /assets/data/surahs/{1..114}.json',
+          'GET /assets/data/translations/en-sahih-international/{1..114}.json',
+          'GET /assets/data/tafsir/muyassar/{1..114}.json',
+          'GET /assets/data/words/{1..114}.json',
+        ],
+      },
+      {
+        heading: 'Audio',
+        paragraphs: [
+          'Verse-by-verse recitation URLs follow a fixed pattern based on the global ayah number (1..6236). Example for Al-Baqarah 255 (global number 262):',
+        ],
+        codeLines: ['https://cdn.islamic.network/quran/audio/128/ar.alafasy/262.mp3'],
+      },
+      {
+        heading: 'Usage example',
+        paragraphs: ['Fetch a surah and print its first verse:'],
+        codeLines: [
+          "const surah = await fetch('/assets/data/surahs/2.json').then(r => r.json());",
+          'console.log(surah.verses[0].text); // الٓمٓ',
+        ],
+      },
+    ],
+    links: [...EN_COMMON_LINKS, { href: '/api', label: 'العربية' }],
+  },
+];
+
+// ---------------------------------------------------------------------------
 // _redirects
 // ---------------------------------------------------------------------------
 
@@ -906,6 +1272,123 @@ function main() {
     writeFile(path.join(DIST, page.file), html);
   }
 
+  // 5.5) النسخة الإنجليزية: /en/index.html + /en/surah/{id}.html + /en/*.html
+  const EN_ROOT = path.join(DIST, 'en');
+  fs.rmSync(EN_ROOT, { recursive: true, force: true });
+  fs.mkdirSync(path.join(EN_ROOT, 'surah'), { recursive: true });
+
+  const translationsById = new Map();
+  for (const surahMeta of surahs) {
+    const translationFile = path.join(
+      DATA_DIR,
+      'translations',
+      'en-sahih-international',
+      `${surahMeta.id}.json`
+    );
+    const translation = readJsonFile(translationFile);
+    if (!translation || !Array.isArray(translation.ayahs)) {
+      throw new Error(`الترجمة الإنجليزية للسورة ${surahMeta.id} غير متاحة: ${translationFile}`);
+    }
+    translationsById.set(surahMeta.id, translation);
+  }
+
+  const arUrlFor = (id) => (id === 1 ? `${SITE}/` : `${SITE}/surah/${id}`);
+  const enUrlFor = (id) => (id === 1 ? `${SITE}/en` : `${SITE}/en/surah/${id}`);
+
+  for (const surahMeta of surahs) {
+    const surah = surahsById.get(surahMeta.id);
+    const title = enSurahTitle(surahMeta);
+    const description = enSurahDescription(surahMeta);
+    const canonical = enUrlFor(surahMeta.id);
+    let html = buildPage(templateHtml, {
+      title,
+      description,
+      canonical,
+      jsonLd: buildSurahStructuredDataEn(surahMeta, description, canonical),
+      rootInnerHtml: renderSurahFallbackHtmlEn(
+        { ...surahMeta, verses: surah.verses },
+        translationsById.get(surahMeta.id),
+        surahs
+      ),
+      prerenderLabel: 'surah-en',
+    });
+    html = injectLanguageAlternates(html, arUrlFor(surahMeta.id), canonical);
+    writeFile(path.join(EN_ROOT, 'surah', `${surahMeta.id}.html`), html);
+  }
+
+  // الصفحة الرئيسية الإنجليزية (/en)
+  {
+    const enHomeSurah = surahsById.get(1);
+    const enHomeMeta = surahs.find((surah) => surah.id === 1);
+    let html = buildPage(templateHtml, {
+      title: HOME_TITLE_EN,
+      description: HOME_DESCRIPTION_EN,
+      canonical: `${SITE}/en`,
+      jsonLd: buildSurahStructuredDataEn(enHomeMeta, HOME_DESCRIPTION_EN, `${SITE}/en`),
+      rootInnerHtml: renderSurahFallbackHtmlEn(
+        { ...enHomeMeta, verses: enHomeSurah.verses },
+        translationsById.get(1),
+        surahs
+      ),
+      prerenderLabel: 'surah-en',
+    });
+    html = injectLanguageAlternates(html, `${SITE}/`, `${SITE}/en`);
+    writeFile(path.join(EN_ROOT, 'index.html'), html);
+  }
+
+  // الصفحات التعريفية الإنجليزية
+  for (const page of EN_STATIC_PAGES) {
+    const canonical = `${SITE}/en/${page.slug}`;
+    let html = buildPage(templateHtml, {
+      title: page.title,
+      description: page.description,
+      canonical,
+      jsonLd: buildWebPageStructuredData({
+        title: page.title,
+        description: page.description,
+        canonical,
+      }),
+      rootInnerHtml: renderStaticFallbackHtmlEn(page),
+      prerenderLabel: `${page.slug}-en`,
+    });
+    html = injectLanguageAlternates(html, `${SITE}/${page.slug}`, canonical);
+    writeFile(path.join(EN_ROOT, page.file), html);
+  }
+
+  // 5.6) إضافة روابط hreflang لكل الصفحات العربية المولّدة + الرئيسية
+  for (const surahMeta of surahs) {
+    const filePath = path.join(SURAH_DIR, `${surahMeta.id}.html`);
+    const html = fs.readFileSync(filePath, 'utf-8');
+    if (!html.includes('hreflang="en"')) {
+      fs.writeFileSync(
+        filePath,
+        injectLanguageAlternates(html, arUrlFor(surahMeta.id), enUrlFor(surahMeta.id)),
+        'utf-8'
+      );
+    }
+  }
+  if (PRERENDER_HOME) {
+    const html = fs.readFileSync(TEMPLATE_FILE, 'utf-8');
+    if (!html.includes('hreflang="en"')) {
+      fs.writeFileSync(
+        TEMPLATE_FILE,
+        injectLanguageAlternates(html, `${SITE}/`, `${SITE}/en`),
+        'utf-8'
+      );
+    }
+  }
+  for (const page of STATIC_PAGES) {
+    const filePath = path.join(DIST, page.file);
+    const html = fs.readFileSync(filePath, 'utf-8');
+    if (!html.includes('hreflang="en"')) {
+      fs.writeFileSync(
+        filePath,
+        injectLanguageAlternates(html, `${SITE}/${page.slug}`, `${SITE}/en/${page.slug}`),
+        'utf-8'
+      );
+    }
+  }
+
   // 6) إبقاء قاعدة SPA fallback فقط (Cloudflare Pages يخدم .html بدون لاحقة)
   const redirects = keepSpaFallbackRedirects();
 
@@ -967,6 +1450,33 @@ function main() {
           /^\s*\/\*\s+\/index\.html\s+200\s*$/.test(lines[0])
         );
       })(),
+    },
+    {
+      label: 'النسخة الإنجليزية: 114 صفحة سورة + الصفحة الرئيسية',
+      ok:
+        fs.readdirSync(path.join(DIST, 'en', 'surah')).filter((name) => name.endsWith('.html'))
+          .length === TOTAL_SURAHS &&
+        fs.existsSync(path.join(DIST, 'en', 'index.html')),
+    },
+    {
+      label: 'صفحة السور الإنجليزية: العنوان + الترجمة',
+      ok: (() => {
+        const html = fs.readFileSync(path.join(DIST, 'en', 'surah', '2.html'), 'utf-8');
+        return (
+          html.includes('<title>Surah Al-Baqarah') &&
+          html.includes('lang="en"') &&
+          html.includes('Alif, Lām, Meem') &&
+          html.includes('rel="canonical" href="https://quran.com.ly/en/surah/2"')
+        );
+      })(),
+    },
+    {
+      label: 'روابط hreflang في الصفحات العربية والإنجليزية',
+      ok:
+        fs.readFileSync(path.join(SURAH_DIR, '2.html'), 'utf-8').includes('hreflang="en"') &&
+        fs
+          .readFileSync(path.join(DIST, 'en', 'surah', '2.html'), 'utf-8')
+          .includes('hreflang="ar"'),
     },
     {
       label: 'كل صفحة تحتوي وسم prerendered وستايل المحتوى الثابت',

@@ -1,7 +1,8 @@
-﻿import React from 'react';
+import React from 'react';
 import { Bookmark, Trash2, ArrowLeft, Play } from 'lucide-react';
 import { Bookmark as BookmarkType, Ayah } from '../types/quran.ts';
 import { toArabicDigits } from '../utils/quranHelpers.ts';
+import { useI18n } from '../i18n.tsx';
 
 interface BookmarksViewProps {
   bookmarks: BookmarkType[];
@@ -16,19 +17,21 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
   onRemoveBookmark,
   onPlayAyah,
 }) => {
+  const { t } = useI18n();
+
   return (
     <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full">
       <div className="bg-white border border-stone-200/90 rounded-2xl p-6 sm:p-8 shadow-xs mb-6 text-right">
         <div className="flex items-center justify-between">
           <div className="p-2.5 rounded-xl bg-amber-50 text-amber-700">
-            <Bookmark className="w-5 h-5 fill-amber-700" />
+            <Bookmark aria-hidden="true" className="w-5 h-5 fill-amber-700" />
           </div>
           <div>
             <h2 className="text-2xl font-bold font-quran text-stone-900">
-              العلامات المحفوظة
+              {t('bookmarks.title')}
             </h2>
             <p className="text-xs text-stone-500 font-sans mt-1">
-              الآيات الكريمة التي قمت بحفظها للرجوع إليها لاحقاً
+              {t('bookmarks.desc')}
             </p>
           </div>
         </div>
@@ -36,12 +39,15 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
 
       {bookmarks.length === 0 ? (
         <div className="text-center py-16 bg-white border border-stone-200/80 rounded-2xl p-8 space-y-3">
-          <Bookmark className="w-10 h-10 text-stone-300 mx-auto" />
+          <Bookmark
+            aria-hidden="true"
+            className="w-10 h-10 text-stone-300 mx-auto"
+          />
           <h3 className="text-lg font-bold font-quran text-stone-700">
-            لا توجد علامات محفوظة حتى الآن
+            {t('bookmarks.emptyTitle')}
           </h3>
           <p className="text-xs text-stone-500 font-sans max-w-sm mx-auto">
-            أثناء قراءة السور، يمكنك الضغط على أيقونة الإشارة المرجعية بجانب أي آية لإضافتها إلى قائمة المحفوظات
+            {t('bookmarks.emptyDesc')}
           </p>
         </div>
       ) : (
@@ -57,7 +63,9 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
                     سورة {bm.surahName}
                   </span>
                   <span aria-hidden="true">·</span>
-                  <span>الآية {toArabicDigits(bm.aya)}</span>
+                  <span>
+                    {t('verse.of')} {toArabicDigits(bm.aya)}
+                  </span>
                   <span aria-hidden="true">·</span>
                   <span className="font-mono text-stone-400">
                     {bm.sura}:{bm.aya}
@@ -70,28 +78,34 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
                       onPlayAyah({ sura: bm.sura, aya: bm.aya, text: bm.previewText })
                     }
                     className="p-1.5 rounded-lg text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors"
-                    title="استماع"
+                    title={t('bookmarks.recite')}
+                    aria-label={t('bookmarks.recite')}
                   >
-                    <Play className="w-4 h-4" />
+                    <Play aria-hidden="true" className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => onRemoveBookmark(bm.sura, bm.aya)}
                     className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
-                    title="حذف من المحفوظات"
+                    title={t('bookmarks.delete')}
+                    aria-label={t('bookmarks.delete')}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 aria-hidden="true" className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => onSelectBookmark(bm.sura, bm.aya)}
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-stone-900 hover:bg-stone-800 text-white text-xs transition-colors"
                   >
-                    <span>فتح في المصحف</span>
-                    <ArrowLeft className="w-3 h-3" />
+                    <span>{t('bookmarks.open')}</span>
+                    <ArrowLeft aria-hidden="true" className="w-3 h-3" />
                   </button>
                 </div>
               </div>
 
-              <p className="font-quran text-xl text-stone-900 leading-loose text-right">
+              {/* نص الآية يبقى RTL دائماً مهما كانت لغة الواجهة */}
+              <p
+                dir="rtl"
+                className="font-quran text-xl text-stone-900 leading-loose text-right"
+              >
                 {bm.previewText}
                 <span className="inline-flex items-center justify-center font-amiri text-stone-500 mx-2 text-xs border border-stone-300 rounded-full w-6 h-6 align-middle bg-stone-50">
                   {toArabicDigits(bm.aya)}

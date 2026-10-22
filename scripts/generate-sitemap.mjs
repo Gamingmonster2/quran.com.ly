@@ -53,18 +53,26 @@ for (let start = 1; start <= 114; start += shardSize) {
 
 let pagesCount = 0;
 let surahsCount = 0;
+let enSurahsCount = 0;
 let ayahsCount = 0;
 
-// 1) الصفحات الثابتة
+// 1) الصفحات الثابتة (عربي + إنجليزي)
 pagesCount = writeSitemap('pages.xml', [
   urlEntry('/', { changefreq: 'daily', priority: '1.0' }),
   urlEntry('/about', { changefreq: 'monthly', priority: '0.5' }),
   urlEntry('/sources', { changefreq: 'monthly', priority: '0.5' }),
   urlEntry('/contact', { changefreq: 'yearly', priority: '0.4' }),
   urlEntry('/data', { changefreq: 'monthly', priority: '0.6' }),
+  urlEntry('/api', { changefreq: 'monthly', priority: '0.5' }),
+  urlEntry('/en', { changefreq: 'daily', priority: '1.0' }),
+  urlEntry('/en/about', { changefreq: 'monthly', priority: '0.5' }),
+  urlEntry('/en/sources', { changefreq: 'monthly', priority: '0.5' }),
+  urlEntry('/en/contact', { changefreq: 'yearly', priority: '0.4' }),
+  urlEntry('/en/data', { changefreq: 'monthly', priority: '0.6' }),
+  urlEntry('/en/api', { changefreq: 'monthly', priority: '0.5' }),
 ]);
 
-// 2) صفحات السور
+// 2) صفحات السور (عربي)
 surahsCount = writeSitemap(
   'surahs.xml',
   surahs
@@ -73,6 +81,19 @@ surahsCount = writeSitemap(
       urlEntry(`/surah/${surah.id}`, {
         changefreq: 'monthly',
         priority: surah.id <= 10 ? '0.9' : '0.8',
+      })
+    )
+);
+
+// 2.5) صفحات السور (إنجليزي)
+enSurahsCount = writeSitemap(
+  'en-surahs.xml',
+  surahs
+    .filter((surah) => surah.id !== 1)
+    .map((surah) =>
+      urlEntry(`/en/surah/${surah.id}`, {
+        changefreq: 'monthly',
+        priority: surah.id <= 10 ? '0.8' : '0.7',
       })
     )
 );
@@ -108,6 +129,10 @@ const indexEntries = [
     <loc>${SITE}/sitemaps/surahs.xml</loc>
     <lastmod>${today}</lastmod>
   </sitemap>`,
+  `  <sitemap>
+    <loc>${SITE}/sitemaps/en-surahs.xml</loc>
+    <lastmod>${today}</lastmod>
+  </sitemap>`,
   ...shardFiles.map(
     (shard) => `  <sitemap>
     <loc>${SITE}/sitemaps/${shard.fileName}</loc>
@@ -126,6 +151,7 @@ fs.writeFileSync(path.join(ROOT, 'public', 'sitemap.xml'), indexXml, 'utf-8');
 console.log('✓ تم توليد خرائط الموقع:');
 console.log(`  - pages.xml: ${pagesCount} رابطًا`);
 console.log(`  - surahs.xml: ${surahsCount} رابطًا`);
+console.log(`  - en-surahs.xml: ${enSurahsCount} رابطًا`);
 for (const shard of shardFiles) {
   console.log(`  - ${shard.fileName}: ${shard.count} رابطًا (سور ${shard.start}-${shard.end})`);
 }

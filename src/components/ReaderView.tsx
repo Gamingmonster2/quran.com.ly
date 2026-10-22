@@ -27,6 +27,7 @@ import {
   loadSurahTranslation,
   loadSurahWords,
 } from '../utils/contentData.ts';
+import { useI18n } from '../i18n.tsx';
 import { VerseCard } from './VerseCard.tsx';
 import { MushafContinuous } from './MushafContinuous.tsx';
 
@@ -131,6 +132,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   resumeTarget,
   onResume,
 }) => {
+  const { t, lang } = useI18n();
+  // أرقام عربية-هندية في الواجهة العربية، ولاتينية في الواجهة الإنجليزية
+  const formatNumber = (value: number): string =>
+    lang === 'ar' ? toArabicDigits(value) : String(value);
+
   const isPlayingThisSurah = isPlaying && playingAyah?.sura === surah.id;
   const showBismillah = surah.id !== 9 && surah.id !== 1; // Surah 1 includes Bismillah as verse 1; Surah 9 doesn't have Bismillah
 
@@ -382,7 +388,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   const resumeSurahLabel = resumeTarget
     ? resumeTarget.surahName
       ? `سورة ${resumeTarget.surahName}`
-      : `سورة رقم ${toArabicDigits(resumeTarget.sura)}`
+      : `سورة رقم ${formatNumber(resumeTarget.sura)}`
     : '';
 
   const handleResumeClick = () => {
@@ -404,7 +410,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           className={`inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 transition-colors hover:bg-stone-50 ${FOCUS_RING}`}
         >
           <ChevronRight aria-hidden="true" className="w-4 h-4" />
-          <span>قائمة السور</span>
+          <span>{t('reader.backToList')}</span>
         </button>
         <span className="text-xs text-stone-500 font-sans truncate">
           سورة {surah.name}
@@ -421,14 +427,14 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <BookOpen aria-hidden="true" className="w-4 h-4 shrink-0 text-emerald-700" />
             <p className="min-w-0 text-xs leading-relaxed text-stone-600">
-              <span className="text-stone-500">تابع القراءة من حيث توقفت: </span>
+              <span className="text-stone-500">{t('reader.resume')}: </span>
               <span className="font-semibold text-stone-900">{resumeSurahLabel}</span>
               <span aria-hidden="true" className="mx-1 text-stone-400">
                 —
               </span>
-              <span className="text-stone-500">الآية </span>
+              <span className="text-stone-500">{t('verse.of')} </span>
               <span className="font-semibold text-stone-900">
-                {toArabicDigits(resumeTarget.aya)}
+                {formatNumber(resumeTarget.aya)}
               </span>
             </p>
           </div>
@@ -436,12 +442,12 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             <button
               type="button"
               onClick={handleResumeClick}
-              aria-label={`متابعة القراءة من ${resumeSurahLabel} عند الآية ${toArabicDigits(
+              aria-label={`متابعة القراءة من ${resumeSurahLabel} عند الآية ${formatNumber(
                 resumeTarget.aya
               )}`}
               className={`inline-flex items-center gap-1 rounded-lg bg-stone-900 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-stone-800 ${FOCUS_RING}`}
             >
-              <span>متابعة</span>
+              <span>{t('reader.resumeAction')}</span>
               <ChevronLeft aria-hidden="true" className="w-3.5 h-3.5" />
             </button>
             <button
@@ -464,7 +470,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
         <div className="relative z-10 space-y-2 sm:space-y-3">
           <div className="text-[10px] sm:text-xs uppercase tracking-widest text-stone-500 font-sans">
-            السورة رقم {toArabicDigits(surah.id)} · {surah.transliteration}
+            {t('reader.surahNumber')} {formatNumber(surah.id)} · {surah.transliteration}
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-bold font-quran text-stone-900">
@@ -472,9 +478,9 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           </h1>
 
           <div className="flex items-center justify-center gap-3 text-xs text-stone-600 font-sans">
-            <span>{surah.type === 'meccan' ? 'مكية' : 'مدنية'}</span>
+            <span>{surah.type === 'meccan' ? t('reader.meccan') : t('reader.medinan')}</span>
             <span aria-hidden="true">·</span>
-            <span>{toArabicDigits(surah.total_verses)} آية</span>
+            <span>{t('reader.verseCount', { n: formatNumber(surah.total_verses) })}</span>
             <span aria-hidden="true" className="hidden sm:inline">·</span>
             <span className="hidden sm:inline">الرسم العثماني برواية حفص عن عاصم</span>
           </div>
@@ -493,12 +499,12 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               {isPlayingThisSurah ? (
                 <>
                   <Pause aria-hidden="true" className="w-4 h-4" />
-                  <span>إيقاف التلاوة</span>
+                  <span>{t('reader.stopRecitation')}</span>
                 </>
               ) : (
                 <>
                   <Play aria-hidden="true" className="w-4 h-4" />
-                  <span>استماع للسورة كاملة</span>
+                  <span>{t('reader.listenSurah')}</span>
                 </>
               )}
             </button>
@@ -509,7 +515,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       {/* Reader Controls Toolbar */}
       <div
         role="group"
-        aria-label="أدوات التحكم في القارئ"
+        aria-label={t('reader.controls')}
         className="bg-[#FAF7F0] border border-stone-200/80 rounded-xl p-2 sm:p-3 mb-4 sm:mb-6 flex flex-wrap items-center justify-between gap-2 sm:gap-3 text-xs font-sans"
       >
         {/* في الجوال: الصف الأول قابل للتمرير أفقيًا لتوفير ارتفاع الشاشة */}
@@ -530,7 +536,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             }`}
           >
             <ListOrdered aria-hidden="true" className="w-3.5 h-3.5" />
-            <span>آية بآية</span>
+            <span>{t('reader.mode.verses')}</span>
           </button>
           <button
             onClick={() => setDisplayMode('continuous')}
@@ -542,7 +548,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             }`}
           >
             <AlignLeft aria-hidden="true" className="w-3.5 h-3.5" />
-            <span>قراءة متصلة</span>
+            <span>{t('reader.mode.continuous')}</span>
           </button>
         </div>
 
@@ -554,7 +560,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         >
           <ToolbarToggle
             active={showTranslation}
-            label="الترجمة"
+            label={t('reader.translation')}
             title="إظهار ترجمة معاني الآيات بالإنجليزية"
             onClick={onToggleTranslation}
           >
@@ -562,7 +568,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           </ToolbarToggle>
           <ToolbarToggle
             active={showTafsir}
-            label="التفسير"
+            label={t('reader.tafsir')}
             title="إظهار التفسير الميسر لكل آية"
             onClick={onToggleTafsir}
           >
@@ -570,7 +576,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           </ToolbarToggle>
           <ToolbarToggle
             active={showWordByWord}
-            label="كلمة بكلمة"
+            label={t('reader.wordByWord')}
             title="إظهار معنى كل كلمة على حدة"
             onClick={onToggleWordByWord}
           >
@@ -584,7 +590,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           {/* Reciter Selector */}
           <div className="flex items-center gap-1.5 text-stone-700">
             <Volume2 aria-hidden="true" className="w-4 h-4 text-stone-400" />
-            <label htmlFor={reciterSelectId}>القارئ:</label>
+            <label htmlFor={reciterSelectId}>{t('reader.reciter')}</label>
             <select
               id={reciterSelectId}
               value={reciterId}
@@ -601,7 +607,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 
           {/* Font Selector */}
           <div className="flex items-center gap-1.5 text-stone-700">
-            <label htmlFor={fontSelectId}>الخط:</label>
+            <label htmlFor={fontSelectId}>{t('reader.font')}</label>
             <select
               id={fontSelectId}
               value={fontChoice}
@@ -622,14 +628,14 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           >
             <Type aria-hidden="true" className="w-4 h-4 text-stone-400" />
             <span id={fontSizeLabelId} className="text-xs">
-              الحجم:
+              {t('reader.size')}
             </span>
             <div className="flex items-center gap-1 bg-white border border-stone-300 rounded-lg p-0.5">
               <button
                 onClick={() => setFontSize((s) => Math.max(18, s - 2))}
                 className={`px-2 py-0.5 hover:bg-stone-100 rounded text-stone-700 font-bold transition-colors ${FOCUS_RING}`}
-                title="تصغير الخط"
-                aria-label="تصغير حجم الخط"
+                title={t('reader.fontSizeDecrease')}
+                aria-label={t('reader.fontSizeDecrease')}
               >
                 -
               </button>
@@ -643,8 +649,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               <button
                 onClick={() => setFontSize((s) => Math.min(42, s + 2))}
                 className={`px-2 py-0.5 hover:bg-stone-100 rounded text-stone-700 font-bold transition-colors ${FOCUS_RING}`}
-                title="تكبير الخط"
-                aria-label="تكبير حجم الخط"
+                title={t('reader.fontSizeIncrease')}
+                aria-label={t('reader.fontSizeIncrease')}
               >
                 +
               </button>
@@ -733,7 +739,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-stone-200 text-stone-700 hover:text-stone-900 hover:border-stone-300 transition-colors shadow-2xs ${FOCUS_RING}`}
           >
             <ChevronRight aria-hidden="true" className="w-4 h-4" />
-            <span>السورة السابقة</span>
+            <span>{t('reader.prevSurah')}</span>
           </button>
         ) : (
           <div />
@@ -745,7 +751,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
             aria-label="الانتقال إلى السورة التالية"
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-stone-200 text-stone-700 hover:text-stone-900 hover:border-stone-300 transition-colors shadow-2xs ${FOCUS_RING}`}
           >
-            <span>السورة التالية</span>
+            <span>{t('reader.nextSurah')}</span>
             <ChevronLeft aria-hidden="true" className="w-4 h-4" />
           </button>
         )}

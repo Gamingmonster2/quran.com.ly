@@ -17,10 +17,13 @@ import {
   Route,
   isStaticPageRoute,
   parseLocation,
+  routeLang,
   routeToAbsoluteUrl,
   routeToPath,
   routeToView,
+  withLang,
 } from './router.ts';
+import { I18nProvider, Lang, makeTranslate } from './i18n.tsx';
 import {
   applyPageSeo,
   buildSurahJsonLd,
@@ -45,11 +48,18 @@ const INITIAL_SURAH_ID =
   INITIAL_ROUTE.name === 'surah' ? INITIAL_ROUTE.surahId : 1;
 // في الجوال: فهرس السور أولًا عند فتح الرئيسية، والقارئ مباشرة عند فتح سورة/آية برابط
 const INITIAL_MOBILE_PANE: 'list' | 'reader' =
-  INITIAL_ROUTE.name === 'surah' && routeToPath(INITIAL_ROUTE) !== '/' ? 'reader' : 'list';
+  INITIAL_ROUTE.name === 'surah' &&
+  !(INITIAL_ROUTE.surahId === 1 && !INITIAL_ROUTE.ayahId)
+    ? 'reader'
+    : 'list';
 
 const HOME_TITLE = 'القرآن الكريم بالرسم العثماني — مصحف إلكتروني وتلاوات | quran.com.ly';
 const HOME_DESCRIPTION =
   'مصحف إلكتروني شامل وقاعدة بيانات مفتوحة المصدر للقرآن الكريم بالرسم العثماني على quran.com.ly: تلاوات صوتية بأصوات نخبة من القرّاء آية بآية، بحث فوري في ٦٢٣٦ آية بدون تشكيل، فهرس السور، أوضاع قراءة ليلية وبيج مريحة للعين، وتنزيل بيانات JSON.';
+const HOME_TITLE_EN =
+  'The Holy Quran in Uthmani Script — digital mushaf & recitations | quran.com.ly';
+const HOME_DESCRIPTION_EN =
+  'A complete digital mushaf and open-source dataset of the Holy Quran in Uthmani script on quran.com.ly: verse-by-verse audio from 15 reciters, instant diacritics-insensitive search over 6,236 ayahs, surah index, dark and beige reading modes, and JSON data downloads.';
 
 export default function App() {
   const [surahs, setSurahs] = useState<SurahMeta[]>([]);
@@ -142,10 +152,14 @@ export default function App() {
 
   /**
    * ينقل المستخدم إلى مسار جديد ويحدّث سجل المتصفح (History API).
-   * كل التنقل داخل الموقع يمر من هنا.
+   * كل التنقل داخل الموقع يمر من هنا، ويحافظ تلقائيًا على لغة الواجهة الحالية.
    */
+  const langRef = useRef<Lang>(routeLang(INITIAL_ROUTE));
+  langRef.current = routeLang(route);
+
   const navigate = useCallback((next: Route, options: { replace?: boolean } = {}) => {
-    const nextPath = routeToPath(next);
+    const resolved: Route = { ...next, lang: next.lang ?? langRef.current };
+    const nextPath = routeToPath(resolved);
     if (window.location.pathname !== nextPath) {
       if (options.replace) {
         window.history.replaceState(null, '', nextPath);
@@ -153,9 +167,9 @@ export default function App() {
         window.history.pushState(null, '', nextPath);
       }
     }
-    setRoute(next);
-    if (next.name === 'surah') {
-      setSelectedSurahId(next.surahId);
+    setRoute(resolved);
+    if (resolved.name === 'surah') {
+      setSelectedSurahId(resolved.surahId);
     }
   }, []);
 
@@ -404,20 +418,23 @@ export default function App() {
     : null;
   const currentReciter = getReciter(reciterId);
   const currentView: ViewMode | null = routeToView(route);
+  const currentLang: Lang = routeLang(route);
+  const t = makeTranslate(currentLang);
 
   // ------- تحديث بيانات SEO والبيانات المنظمة عند كل تنقل -------
   useEffect(() => {
     const path = routeToPath(route);
+    const isEn = routeLang(route) === 'en';
 
     if (route.name === 'surah') {
       const surahFull = bySurahMap.get(route.surahId);
       const surah = surahFull ?? surahs.find((s) => s.id === route.surahId);
-      const isHome = path === '/';
+      const isHome = path === '/' || path === '/en';
 
       if (!surah) {
         applyPageSeo({
-          title: HOME_TITLE,
-          description: HOME_DESCRIPTION,
+          title: isEn ? HOME_TITLE_EN : HOME_TITLE,
+          description: isEn ? HOME_DESCRIPTION_EN : HOME_DESCRIPTION,
           route,
         });
         return;
@@ -425,15 +442,16 @@ export default function App() {
 
       if (isHome) {
         applyPageSeo({
-          title: HOME_TITLE,
-          description: HOME_DESCRIPTION,
+          title: isEn ? HOME_TITLE_EN : HOME_TITLE,
+          description: isEn ? HOME_DESCRIPTION_EN : HOME_DESCRIPTION,
           route,
           jsonLd: buildSurahJsonLd({ surah, url: routeToAbsoluteUrl(route) }),
         });
         return;
       }
 
-      const surahType = surah.type === 'meccan' ? 'مكية' : 'مدنية';
+      const surahTypeAr = surah.type === 'meccan' ? 'مكية' : 'مدنية';
+      const surahTypeEn = surah.type === 'meccan' ? 'Meccan' : 'Medinan';
       const url = routeToAbsoluteUrl(route);
 
       if (route.ayahId) {
@@ -442,11 +460,18 @@ export default function App() {
         );
         const ayahText = ayah?.text ?? '';
         const snippet = ayahText.length > 120 ? `${ayahText.slice(0, 120)}…` : ayahText;
+        const ayahDigits = toArabicDigits(route.ayahId);
         applyPageSeo({
-          title: `سورة ${surah.name} — الآية ${toArabicDigits(route.ayahId)} | القرآن الكريم بالرسم العثماني`,
-          description: snippet
-            ? `${snippet} — اقرأ الآية ${toArabicDigits(route.ayahId)} من سورة ${surah.name} بالرسم العثماني واستمع لها آية بآية على quran.com.ly.`
-            : `الآية ${toArabicDigits(route.ayahId)} من سورة ${surah.name} بالرسم العثماني على quran.com.ly.`,
+          title: isEn
+            ? `Surah ${surah.transliteration} — Ayah ${route.ayahId} | The Holy Quran | quran.com.ly`
+            : `سورة ${surah.name} — الآية ${ayahDigits} | القرآن الكريم بالرسم العثماني`,
+          description: isEn
+            ? snippet
+              ? `${snippet} — Read ayah ${route.ayahId} of Surah ${surah.transliteration} in Uthmani script and listen to it verse by verse on quran.com.ly.`
+              : `Ayah ${route.ayahId} of Surah ${surah.transliteration} in Uthmani script on quran.com.ly.`
+            : snippet
+              ? `${snippet} — اقرأ الآية ${ayahDigits} من سورة ${surah.name} بالرسم العثماني واستمع لها آية بآية على quran.com.ly.`
+              : `الآية ${ayahDigits} من سورة ${surah.name} بالرسم العثماني على quran.com.ly.`,
           route,
           jsonLd: buildSurahJsonLd({
             surah,
@@ -457,8 +482,12 @@ export default function App() {
         });
       } else {
         applyPageSeo({
-          title: `سورة ${surah.name} — القرآن الكريم بالرسم العثماني | quran.com.ly`,
-          description: `سورة ${surah.name} (${surah.transliteration}) — سورة ${surahType}، عدد آياتها ${toArabicDigits(surah.total_verses)} آية بالرسم العثماني. اقرأها واستمع إليها آية بآية بأصوات نخبة من القرّاء على quran.com.ly.`,
+          title: isEn
+            ? `Surah ${surah.transliteration} (${surah.name}) — The Holy Quran | quran.com.ly`
+            : `سورة ${surah.name} — القرآن الكريم بالرسم العثماني | quran.com.ly`,
+          description: isEn
+            ? `Surah ${surah.transliteration} (${surah.name}) — ${surahTypeEn} surah with ${surah.total_verses} verses in Uthmani script. Read it and listen verse by verse from renowned reciters on quran.com.ly.`
+            : `سورة ${surah.name} (${surah.transliteration}) — سورة ${surahTypeAr}، عدد آياتها ${toArabicDigits(surah.total_verses)} آية بالرسم العثماني. اقرأها واستمع إليها آية بآية بأصوات نخبة من القرّاء على quran.com.ly.`,
           route,
           jsonLd: buildSurahJsonLd({ surah, url }),
         });
@@ -467,21 +496,28 @@ export default function App() {
     }
 
     if (route.name === 'search') {
+      const title = isEn
+        ? 'Search the Holy Quran | quran.com.ly'
+        : 'البحث في آيات القرآن الكريم | quran.com.ly';
+      const description = isEn
+        ? 'Instantly search all 6,236 ayahs of the Holy Quran in Uthmani script without diacritics, then jump to any ayah or listen to its recitation.'
+        : 'ابحث فورًا في آيات القرآن الكريم الـ٦٢٣٦ بالرسم العثماني، دون الحاجة إلى كتابة التشكيل، مع إمكانية الانتقال إلى الآية أو سماع تلاوتها.';
       applyPageSeo({
-        title: 'البحث في آيات القرآن الكريم | quran.com.ly',
-        description:
-          'ابحث فورًا في آيات القرآن الكريم الـ٦٢٣٦ بالرسم العثماني، دون الحاجة إلى كتابة التشكيل، مع إمكانية الانتقال إلى الآية أو سماع تلاوتها.',
+        title,
+        description,
         route,
         robots: 'noindex, follow',
-        jsonLd: buildWebPageJsonLd('البحث في الآيات', 'بحث فوري في آيات القرآن الكريم.', route),
+        jsonLd: buildWebPageJsonLd(title, description, route),
       });
       return;
     }
 
     if (route.name === 'bookmarks') {
       applyPageSeo({
-        title: 'العلامات المحفوظة | quran.com.ly',
-        description: 'آياتك المحفوظة في القرآن الكريم للرجوع إليها لاحقًا، محفوظة محليًا في متصفحك.',
+        title: isEn ? 'Bookmarks | quran.com.ly' : 'العلامات المحفوظة | quran.com.ly',
+        description: isEn
+          ? 'Your saved ayahs of the Holy Quran, stored locally in your browser for later reading.'
+          : 'آياتك المحفوظة في القرآن الكريم للرجوع إليها لاحقًا، محفوظة محليًا في متصفحك.',
         route,
         robots: 'noindex, follow',
       });
@@ -489,54 +525,61 @@ export default function App() {
     }
 
     if (route.name === 'data') {
-      applyPageSeo({
-        title: 'مستودع بيانات القرآن الكريم (JSON) | quran.com.ly',
-        description:
-          'تنزيل بيانات القرآن الكريم كاملة بالرسم العثماني بصيغة JSON (quran.json وquran-by-surah.json) مع هيكلية موثقة وأمثلة استخدام.',
-        route,
-        jsonLd: buildWebPageJsonLd(
-          'مستودع بيانات القرآن الكريم',
-          'بيانات القرآن الكريم كاملة بصيغة JSON مفتوحة المصدر.',
-          route
-        ),
-      });
+      const title = isEn
+        ? 'Quran Data Repository (JSON) | quran.com.ly'
+        : 'مستودع بيانات القرآن الكريم (JSON) | quran.com.ly';
+      const description = isEn
+        ? 'Download the complete Holy Quran dataset in Uthmani script as JSON (quran.json and quran-by-surah.json) with documented schema and usage examples.'
+        : 'تنزيل بيانات القرآن الكريم كاملة بالرسم العثماني بصيغة JSON (quran.json وquran-by-surah.json) مع هيكلية موثقة وأمثلة استخدام.';
+      applyPageSeo({ title, description, route, jsonLd: buildWebPageJsonLd(title, description, route) });
       return;
     }
 
     if (route.name === 'about') {
-      const title = 'عن المشروع | quran.com.ly';
-      const description =
-        'عن موقع quran.com.ly: قصة المشروع، صاحب المشروع، التقنيات المستخدمة، ترخيص MIT، وكيفية استمرار تطوير هذا المصحف الإلكتروني.';
+      const title = isEn ? 'About | quran.com.ly' : 'عن المشروع | quran.com.ly';
+      const description = isEn
+        ? 'About quran.com.ly: the project story, owner, technology stack, MIT license, and how this digital mushaf continues to evolve.'
+        : 'عن موقع quran.com.ly: قصة المشروع، صاحب المشروع، التقنيات المستخدمة، ترخيص MIT، وكيفية استمرار تطوير هذا المصحف الإلكتروني.';
       applyPageSeo({ title, description, route, jsonLd: buildWebPageJsonLd(title, description, route) });
       return;
     }
 
     if (route.name === 'sources') {
-      const title = 'المصادر والتراخيص | quran.com.ly';
-      const description =
-        'مصادر بيانات القرآن الكريم في quran.com.ly: نص quran-json بالرسم العثماني، تلاوات islamic.network، الخطوط والتراخيص.';
+      const title = isEn
+        ? 'Sources & Licenses | quran.com.ly'
+        : 'المصادر والتراخيص | quran.com.ly';
+      const description = isEn
+        ? 'Data sources for quran.com.ly: quran-json Uthmani text, islamic.network recitations, embedded fonts, and their licenses.'
+        : 'مصادر بيانات القرآن الكريم في quran.com.ly: نص quran-json بالرسم العثماني، تلاوات islamic.network، الخطوط والتراخيص.';
       applyPageSeo({ title, description, route, jsonLd: buildWebPageJsonLd(title, description, route) });
       return;
     }
 
     if (route.name === 'contact') {
-      const title = 'تواصل معنا | quran.com.ly';
-      const description = 'طرق التواصل مع فريق quran.com.ly عبر مستودع المشروع على GitHub ومسائل المشروع.';
+      const title = isEn ? 'Contact | quran.com.ly' : 'تواصل معنا | quran.com.ly';
+      const description = isEn
+        ? 'How to reach the quran.com.ly team via the GitHub repository and its issues board.'
+        : 'طرق التواصل مع فريق quran.com.ly عبر مستودع المشروع على GitHub ومسائل المشروع.';
       applyPageSeo({ title, description, route, jsonLd: buildWebPageJsonLd(title, description, route) });
       return;
     }
 
     if (route.name === 'api') {
-      const title = 'واجهة البيانات (Content API) | quran.com.ly';
-      const description =
-        'بيانات القرآن الكريم كاملة (النص العثماني، الترجمة، التفسير، كلمة بكلمة) متاحة كملفات JSON ثابتة مع CORS مفتوح وتوثيق كامل على quran.com.ly.';
+      const title = isEn
+        ? 'Content API | quran.com.ly'
+        : 'واجهة البيانات (Content API) | quran.com.ly';
+      const description = isEn
+        ? 'The complete Holy Quran dataset (Arabic text, translation, tafsir, word by word) is available as static JSON files with open CORS and full documentation on quran.com.ly.'
+        : 'بيانات القرآن الكريم كاملة (النص العثماني، الترجمة، التفسير، كلمة بكلمة) متاحة كملفات JSON ثابتة مع CORS مفتوح وتوثيق كامل على quran.com.ly.';
       applyPageSeo({ title, description, route, jsonLd: buildWebPageJsonLd(title, description, route) });
       return;
     }
 
     applyPageSeo({
-      title: 'الصفحة غير موجودة | quran.com.ly',
-      description: 'الصفحة التي تبحث عنها غير موجودة. عد إلى فهرس السور لاستكشاف القرآن الكريم.',
+      title: isEn ? 'Page not found | quran.com.ly' : 'الصفحة غير موجودة | quran.com.ly',
+      description: isEn
+        ? 'The page you are looking for does not exist. Go back to the surah index to explore the Holy Quran.'
+        : 'الصفحة التي تبحث عنها غير موجودة. عد إلى فهرس السور لاستكشاف القرآن الكريم.',
       route,
       robots: 'noindex, follow',
     });
@@ -747,16 +790,22 @@ export default function App() {
   }, [readingProgress, route, surahs]);
 
   return (
-    <div className="h-dvh min-h-0 flex flex-col overflow-hidden bg-[#FBF9F5] text-stone-900 font-sans selection:bg-emerald-100 selection:text-emerald-900">
-      <Header
-        currentView={currentView}
-        onSelectView={handleSelectView}
-        onOpenDataModal={() => setIsDataModalOpen(true)}
-        theme={theme}
-        onSelectTheme={setTheme}
-        onNavigateHome={() => navigate({ name: 'surah', surahId: 1 })}
-        onOpenCommandPalette={() => setIsPaletteOpen(true)}
-      />
+    <I18nProvider lang={currentLang}>
+      <div className="h-dvh min-h-0 flex flex-col overflow-hidden bg-[#FBF9F5] text-stone-900 font-sans selection:bg-emerald-100 selection:text-emerald-900">
+        <Header
+          currentView={currentView}
+          onSelectView={handleSelectView}
+          onOpenDataModal={() => setIsDataModalOpen(true)}
+          theme={theme}
+          onSelectTheme={setTheme}
+          onNavigateHome={() => navigate({ name: 'surah', surahId: 1 })}
+          onOpenCommandPalette={() => setIsPaletteOpen(true)}
+          lang={currentLang}
+          onSwitchLang={(lang) => {
+            if (lang === currentLang) return;
+            navigate(withLang(route, lang));
+          }}
+        />
 
       {/* Main Content Area */}
       <main className="flex-1 min-h-0 flex overflow-hidden">
@@ -909,18 +958,16 @@ export default function App() {
       <footer className="shrink-0 border-t border-stone-200 bg-[#FAF7F0] px-3 py-2 sm:px-4 sm:py-3 font-sans">
         <div className="hidden sm:flex max-w-7xl mx-auto flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-right">
           <div className="text-xs text-stone-600 leading-relaxed">
-            <span className="font-bold text-stone-800">
-              القرآن الكريم بالرسم العثماني
-            </span>
+            <span className="font-bold text-stone-800">{t('app.title')}</span>
             <span className="mx-1.5 text-stone-400">·</span>
-            <span>مصحف إلكتروني وقاعدة بيانات مفتوحة المصدر</span>
+            <span>{t('footer.desc')}</span>
           </div>
           <div className="flex items-center gap-3 text-xs">
             <span className="font-mono text-stone-500" dir="ltr">
               quran.com.ly
             </span>
             <span className="hidden sm:inline text-stone-300">|</span>
-            <span className="text-stone-500">تلاوات بعدة قرّاء · بحث فوري · بيانات JSON</span>
+            <span className="text-stone-500">{t('footer.highlights')}</span>
           </div>
         </div>
 
@@ -937,42 +984,41 @@ export default function App() {
             onClick={() => navigate({ name: 'about' })}
             className="hover:text-emerald-900 transition-colors"
           >
-            عن المشروع
+            {t('footer.about')}
           </button>
           <span aria-hidden="true">·</span>
           <button
             onClick={() => navigate({ name: 'sources' })}
             className="hover:text-emerald-900 transition-colors"
           >
-            المصادر والتراخيص
+            {t('footer.sources')}
           </button>
           <span aria-hidden="true">·</span>
           <button
             onClick={() => navigate({ name: 'contact' })}
             className="hover:text-emerald-900 transition-colors"
           >
-            تواصل معنا
+            {t('footer.contact')}
           </button>
           <span aria-hidden="true">·</span>
           <button
             onClick={() => navigate({ name: 'api' })}
             className="hover:text-emerald-900 transition-colors"
           >
-            واجهة البيانات (API)
+            {t('footer.api')}
           </button>
           <span aria-hidden="true">·</span>
           <button
             onClick={() => navigate({ name: 'data' })}
             className="hover:text-emerald-900 transition-colors"
           >
-            مستودع البيانات
+            {t('footer.data')}
           </button>
         </nav>
 
         {/* إشارة بسيطة إلى المساعدة الأولية في جلب ملفات البيانات */}
         <div className="max-w-7xl mx-auto mt-1 sm:mt-2 text-center text-[9px] sm:text-[11px] leading-snug sm:leading-relaxed text-stone-400">
-          بدأ المشروع بمساعدة أدوات Google AI Studio في جلب بيانات القرآن بصيغة JSON، ثم أُكمل تطويره
-          وصيانته من صاحب المشروع.
+          {t('footer.credit')}
         </div>
       </footer>
 
@@ -1026,6 +1072,7 @@ export default function App() {
         onSelectSurah={handleSelectSurah}
         onAction={handlePaletteAction}
       />
-    </div>
+      </div>
+    </I18nProvider>
   );
 }
