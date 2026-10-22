@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Download, FileJson, Copy, Check, ExternalLink, Code2, Database, Type } from 'lucide-react';
 import { Ayah, SurahMeta } from '../types/quran.ts';
 import { toArabicDigits } from '../utils/quranHelpers.ts';
@@ -177,12 +177,12 @@ module.exports = {
     {
       id: 'amiri',
       name: 'خط أميري القرآن',
-      family: 'Amiri Quran',
-      file: 'Google Fonts',
-      path: 'يُحمَّل تلقائياً من Google Fonts',
-      sizeKb: null as number | null,
+      family: 'Amiri Quran (SIL OFL)',
+      file: 'amiri-quran-normal-400-_Xmo-Hk0rD6DbUL4_vH8Zp5v5i2ssg.woff2',
+      path: '/fonts/amiri-quran-normal-400-_Xmo-Hk0rD6DbUL4_vH8Zp5v5i2ssg.woff2',
+      sizeKb: 45,
       className: 'font-amiri-quran',
-      note: 'خط بديل للعرض على الويب دون تضمين محلي، يُستخدم عند تعذّر تحميل الخطوط المحلية.',
+      note: 'خط بديل للعرض على الويب، مضمّن محلياً داخل المشروع برخصة SIL Open Font License.',
     },
   ];
 
@@ -462,7 +462,7 @@ module.exports = {
                   <button
                     onClick={() => {
                       if (font.sizeKb !== null) {
-                        downloadFile(`/assets/fonts/${font.file}`, font.file);
+                        downloadFile(font.path, font.file);
                       }
                     }}
                     disabled={font.sizeKb === null}
