@@ -44,20 +44,33 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header lang={lang} className="sticky top-0 z-30 bg-[#FBF9F5]/90 backdrop-blur-md border-b border-stone-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-3 sm:gap-8 h-16">
-        {/* Zone 1: wordmark مترجم؛ يتمدّد ويُقتطع عند الحاجة بدل دفع بقية الأزرار خارج الشاشة */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2 min-h-16">
+        {/* Zone 1: الشعار + اسم الموقع (لا يُقتطع النص أبدًا؛ يلتف الصف بدل قصّه) */}
         <button
           onClick={onNavigateHome}
           title={t('app.title')}
-          className={`min-w-0 max-w-full truncate text-start font-bold text-stone-900 whitespace-nowrap hover:text-emerald-900 transition-colors ${
-            isArabic ? 'font-quran text-xl sm:text-2xl' : 'font-sans text-base sm:text-xl'
-          }`}
+          aria-label={t('app.title')}
+          className={`flex shrink-0 items-center gap-2.5 text-start rounded-xl transition-opacity hover:opacity-85 ${FOCUS_RING}`}
         >
-          {t('app.title')}
+          {/* شعار مؤقت يحمل كلمة «قرآن» — يبقى صالحًا بعد تغيير اسم الموقع */}
+          <span
+            aria-hidden="true"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-emerald-800 to-emerald-950 text-white shadow-sm ring-1 ring-emerald-900/25 sm:h-10 sm:w-10"
+          >
+            <span className="font-quran text-[13px] leading-[1.5] sm:text-sm">قرآن</span>
+          </span>
+          <span
+            className={`font-bold text-stone-900 whitespace-nowrap ${
+              isArabic ? 'font-quran text-lg sm:text-2xl' : 'font-sans text-sm sm:text-xl'
+            }`}
+          >
+            <span className="sm:hidden">{t('app.title.short')}</span>
+            <span className="hidden sm:inline">{t('app.title')}</span>
+          </span>
         </button>
 
-        {/* Zone 2: روابط التنقل */}
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-stone-700">
+        {/* Zone 2: روابط التنقل — صف مستقل على الشاشات المتوسطة/الكبيرة لتفادي اقتطاع الاسم */}
+        <nav className="order-last hidden w-full items-center justify-center gap-5 border-t border-stone-200/70 pt-1 text-sm font-medium text-stone-700 md:flex 2xl:order-none 2xl:w-auto 2xl:justify-start 2xl:border-0 2xl:pt-0">
           <button
             onClick={() => onSelectView('surah')}
             aria-current={currentView === 'surah' ? 'page' : undefined}
@@ -105,7 +118,7 @@ export const Header: React.FC<HeaderProps> = ({
         </nav>
 
         {/* Zone 3: مبدّل السمة + مبدّل اللغة + بحث سريع + الإجراء الأساسي */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="order-2 flex items-center gap-2 shrink-0 ms-auto">
           {/* Desktop theme switcher */}
           <div
             className="hidden md:flex items-center gap-0.5 p-0.5 bg-stone-200/60 rounded-lg"
@@ -194,10 +207,11 @@ export const Header: React.FC<HeaderProps> = ({
             type="button"
             onClick={onOpenDataModal}
             title={t('header.download')}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold text-white bg-stone-900 rounded-lg hover:bg-stone-800 transition-colors shadow-sm whitespace-nowrap shrink-0 ${FOCUS_RING}`}
+            aria-label={t('header.download')}
+            className={`inline-flex items-center gap-2 px-2.5 py-1.5 text-xs font-semibold text-white bg-stone-900 rounded-lg hover:bg-stone-800 transition-colors shadow-sm whitespace-nowrap shrink-0 sm:px-3.5 ${FOCUS_RING}`}
           >
             <Download className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>{t('header.download')}</span>
+            <span className="hidden md:inline">{t('header.download')}</span>
           </button>
         </div>
       </div>

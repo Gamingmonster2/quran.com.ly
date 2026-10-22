@@ -15,6 +15,7 @@ export const LANG_LABELS: Record<Lang, string> = {
 
 const ar: Record<string, string> = {
   'app.title': 'القرآن الكريم بالرسم العثماني',
+  'app.title.short': 'القرآن الكريم',
   'nav.surahs': 'فهرس السور',
   'nav.search': 'البحث في الآيات',
   'nav.bookmarks': 'العلامات المحفوظة',
@@ -99,6 +100,7 @@ const ar: Record<string, string> = {
 
 const en: Record<string, string> = {
   'app.title': 'The Holy Quran — Uthmani Script',
+  'app.title.short': 'The Holy Quran',
   'nav.surahs': 'Surahs',
   'nav.search': 'Search Ayahs',
   'nav.bookmarks': 'Bookmarks',
