@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Ayah, SurahMeta, SurahWithVerses, Bookmark, ViewMode, ReadingDisplayMode, QuranFontChoice } from './types/quran.ts';
+import { Ayah, SurahMeta, SurahWithVerses, Bookmark, ViewMode, ReadingDisplayMode, QuranFontChoice, ThemeMode } from './types/quran.ts';
 import { Header } from './components/Header.tsx';
 import { SurahList } from './components/SurahList.tsx';
 import { ReaderView } from './components/ReaderView.tsx';
@@ -7,7 +7,15 @@ import { SearchView } from './components/SearchView.tsx';
 import { BookmarksView } from './components/BookmarksView.tsx';
 import { DataInspectorModal } from './components/DataInspectorModal.tsx';
 import { AudioPlayerBar } from './components/AudioPlayerBar.tsx';
-import { getAyahAudioUrl } from './utils/quranHelpers.ts';
+import {
+  computeAyahOffsets,
+  getAyahAudioUrls,
+  getGlobalAyahNumber,
+} from './utils/quranHelpers.ts';
+import { DEFAULT_RECITER_ID, RECITERS, getReciter } from './utils/reciters.ts';
+
+const THEME_STORAGE_KEY = 'quran_theme';
+const RECITER_STORAGE_KEY = 'quran_reciter';
 
 export default function App() {
   const [surahs, setSurahs] = useState<SurahMeta[]>([]);
@@ -21,11 +29,41 @@ export default function App() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // المظهر: الوضع الليلي افتراضي، والوضع البيج المريح للعين بديل
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    try {
+      return localStorage.getItem(THEME_STORAGE_KEY) === 'beige' ? 'beige' : 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
+
+  // القارئ المختار للتلاوة الصوتية
+  const [reciterId, setReciterId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(RECITER_STORAGE_KEY);
+      return saved && RECITERS.some((reciter) => reciter.id === saved)
+        ? saved
+        : DEFAULT_RECITER_ID;
+    } catch {
+      return DEFAULT_RECITER_ID;
+    }
+  });
+  const [audioError, setAudioError] = useState<string | null>(null);
+
   // Audio Playback State
   const [playingAyah, setPlayingAyah] = useState<Ayah | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [repeatMode, setRepeatMode] = useState<boolean>(false);
+
+  // عنصر صوت واحد يُنشأ مرة واحدة فقط حتى لا تتوقف التلاوة عند تغيّر الحالة
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  if (audioRef.current === null) {
+    audioRef.current = new Audio();
+    audioRef.current.preload = 'auto';
+  }
+  const audioCandidatesRef = useRef<string[]>([]);
+  const audioCandidateIndexRef = useRef<number>(0);
 
   // Bookmarks State
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(() => {
@@ -77,6 +115,44 @@ export default function App() {
     loadData();
   }, []);
 
+  // رقم الآية العام في المصحف (1..6236) اللازم لملفات التلاوة الصوتية
+  const ayahOffsets = useMemo(() => computeAyahOffsets(surahs), [surahs]);
+
+  // حالة الصوت الحالية في مرجع حتى تصل إليها مستمعات عنصر الصوت الأصيلة
+  const audioStateRef = useRef({
+    playingAyah,
+    repeatMode,
+    bySurahMap,
+    reciterId,
+    ayahOffsets,
+  });
+  useEffect(() => {
+    audioStateRef.current = { playingAyah, repeatMode, bySurahMap, reciterId, ayahOffsets };
+  }, [playingAyah, repeatMode, bySurahMap, reciterId, ayahOffsets]);
+
+  // تطبيق السمة على الصفحة وحفظها
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      /* ignore */
+    }
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', theme === 'dark' ? '#0e1110' : '#f7f1e3');
+    }
+  }, [theme]);
+
+  // حفظ القارئ المختار
+  useEffect(() => {
+    try {
+      localStorage.setItem(RECITER_STORAGE_KEY, reciterId);
+    } catch {
+      /* ignore */
+    }
+  }, [reciterId]);
+
   // Sync bookmarks to localStorage
   useEffect(() => {
     try {
@@ -86,82 +162,150 @@ export default function App() {
     }
   }, [bookmarks]);
 
-  // Audio element management
+  /**
+   * تحميل صوت آية معيّنة وتشغيلها.
+   * يجرب الجودة الأعلى أولاً ثم يتراجع للجودة الأقل عبر مستمع الخطأ.
+   */
+  const loadAyahAudio = (ayah: Ayah, reciter = getReciter(reciterId), autoplay = true) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const globalAyahNumber = getGlobalAyahNumber(ayah.sura, ayah.aya, ayahOffsets);
+    const urls = getAyahAudioUrls(reciter, globalAyahNumber);
+
+    audioCandidatesRef.current = urls;
+    audioCandidateIndexRef.current = 0;
+    setAudioError(null);
+
+    audio.src = urls[0];
+    audio.load();
+    if (autoplay) {
+      audio.play().catch((err: unknown) => {
+        if ((err as DOMException)?.name !== 'AbortError') {
+          console.warn('Audio play request interrupted or blocked:', err);
+        }
+      });
+    }
+  };
+
+  // ربط عنصر الصوت بالمستمعات مرة واحدة فقط (لا يُعاد إنشاء العنصر)
   useEffect(() => {
-    const audio = new Audio();
-    audioRef.current = audio;
+    const audio = audioRef.current;
+    if (!audio) return;
 
-    const handleEnded = () => {
-      if (repeatMode && playingAyah) {
-        audio.currentTime = 0;
-        audio.play().catch(console.error);
-        return;
-      }
+    const playCandidate = (index: number) => {
+      const urls = audioCandidatesRef.current;
+      if (index >= urls.length) return false;
+      audioCandidateIndexRef.current = index;
+      audio.src = urls[index];
+      audio.load();
+      audio.play().catch(() => {
+        /* الخطأ يعالجه مستمع error */
+      });
+      return true;
+    };
 
-      // Advance to next Ayah
-      if (playingAyah) {
-        const currentSurahObj = bySurahMap.get(playingAyah.sura);
-        if (currentSurahObj) {
-          if (playingAyah.aya < currentSurahObj.total_verses) {
-            const nextAyah = currentSurahObj.verses.find(
-              (v) => v.aya === playingAyah.aya + 1
-            );
-            if (nextAyah) {
-              setPlayingAyah(nextAyah);
-              audio.src = getAyahAudioUrl(nextAyah.sura, nextAyah.aya);
-              audio.play().catch(console.error);
-              return;
-            }
-          } else if (playingAyah.sura < 114) {
-            // Move to next Surah Ayah 1
-            const nextSurahObj = bySurahMap.get(playingAyah.sura + 1);
-            if (nextSurahObj && nextSurahObj.verses.length > 0) {
-              setSelectedSurahId(nextSurahObj.id);
-              const firstAyah = nextSurahObj.verses[0];
-              setPlayingAyah(firstAyah);
-              audio.src = getAyahAudioUrl(firstAyah.sura, firstAyah.aya);
-              audio.play().catch(console.error);
-              return;
-            }
-          }
+    const advanceToNextAyah = (current: Ayah) => {
+      const state = audioStateRef.current;
+      const currentSurahObj = state.bySurahMap.get(current.sura);
+      let nextAyah: Ayah | null = null;
+
+      if (currentSurahObj && current.aya < currentSurahObj.total_verses) {
+        nextAyah = currentSurahObj.verses.find((verse) => verse.aya === current.aya + 1) ?? null;
+      } else if (current.sura < 114) {
+        const nextSurahObj = state.bySurahMap.get(current.sura + 1);
+        if (nextSurahObj && nextSurahObj.verses.length > 0) {
+          nextAyah = nextSurahObj.verses[0];
         }
       }
 
-      setIsPlaying(false);
-      setPlayingAyah(null);
+      if (!nextAyah) {
+        setIsPlaying(false);
+        setPlayingAyah(null);
+        return;
+      }
+
+      if (nextAyah.sura !== state.playingAyah?.sura) {
+        setSelectedSurahId(nextAyah.sura);
+      }
+      setPlayingAyah(nextAyah);
+
+      const reciter = getReciter(state.reciterId);
+      const globalAyahNumber = getGlobalAyahNumber(
+        nextAyah.sura,
+        nextAyah.aya,
+        state.ayahOffsets
+      );
+      audioCandidatesRef.current = getAyahAudioUrls(reciter, globalAyahNumber);
+      audioCandidateIndexRef.current = 0;
+      setAudioError(null);
+      playCandidate(0);
+    };
+
+    const handleEnded = () => {
+      const state = audioStateRef.current;
+      const current = state.playingAyah;
+      if (!current) {
+        setIsPlaying(false);
+        return;
+      }
+      if (state.repeatMode) {
+        audio.currentTime = 0;
+        audio.play().catch(() => {
+          /* ignore */
+        });
+        return;
+      }
+      advanceToNextAyah(current);
     };
 
     const handlePause = () => setIsPlaying(false);
     const handlePlay = () => setIsPlaying(true);
 
+    const handleError = () => {
+      const urls = audioCandidatesRef.current;
+      const nextIndex = audioCandidateIndexRef.current + 1;
+      if (nextIndex < urls.length) {
+        if (playCandidate(nextIndex)) return;
+      }
+      setIsPlaying(false);
+      setAudioError('تعذّر تشغيل التلاوة الصوتية. جرّب قارئاً آخر أو تحقّق من اتصال الإنترنت.');
+    };
+
     audio.addEventListener('ended', handleEnded);
     audio.addEventListener('pause', handlePause);
     audio.addEventListener('play', handlePlay);
+    audio.addEventListener('error', handleError);
 
     return () => {
       audio.pause();
       audio.removeEventListener('ended', handleEnded);
       audio.removeEventListener('pause', handlePause);
       audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('error', handleError);
     };
-  }, [playingAyah, repeatMode, bySurahMap]);
+  }, []);
+
+  const currentSurah = bySurahMap.get(selectedSurahId) || null;
+  const currentPlayingSurahMeta = playingAyah
+    ? surahs.find((s) => s.id === playingAyah.sura) || null
+    : null;
+  const currentReciter = getReciter(reciterId);
 
   const handlePlayAyah = (ayah: Ayah) => {
-    if (!audioRef.current) return;
+    const audio = audioRef.current;
+    if (!audio) return;
 
     if (
       isPlaying &&
       playingAyah?.sura === ayah.sura &&
       playingAyah?.aya === ayah.aya
     ) {
-      audioRef.current.pause();
+      audio.pause();
       setIsPlaying(false);
     } else {
       setPlayingAyah(ayah);
-      audioRef.current.src = getAyahAudioUrl(ayah.sura, ayah.aya);
-      audioRef.current.play().catch((err) => {
-        console.warn('Audio play request interrupted or blocked:', err);
-      });
+      loadAyahAudio(ayah);
       setIsPlaying(true);
     }
   };
@@ -175,7 +319,9 @@ export default function App() {
       setIsPlaying(false);
     } else {
       const firstAyah = currentSurahObj.verses[0];
-      handlePlayAyah(firstAyah);
+      setPlayingAyah(firstAyah);
+      loadAyahAudio(firstAyah);
+      setIsPlaying(true);
     }
   };
 
@@ -184,17 +330,21 @@ export default function App() {
     const currentSurahObj = bySurahMap.get(playingAyah.sura);
     if (!currentSurahObj) return;
 
+    let nextAyah: Ayah | null = null;
     if (playingAyah.aya < currentSurahObj.total_verses) {
-      const nextAyah = currentSurahObj.verses.find(
-        (v) => v.aya === playingAyah.aya + 1
-      );
-      if (nextAyah) handlePlayAyah(nextAyah);
+      nextAyah = currentSurahObj.verses.find((v) => v.aya === playingAyah.aya + 1) ?? null;
     } else if (playingAyah.sura < 114) {
       const nextSurahObj = bySurahMap.get(playingAyah.sura + 1);
       if (nextSurahObj && nextSurahObj.verses.length > 0) {
         setSelectedSurahId(nextSurahObj.id);
-        handlePlayAyah(nextSurahObj.verses[0]);
+        nextAyah = nextSurahObj.verses[0];
       }
+    }
+
+    if (nextAyah) {
+      setPlayingAyah(nextAyah);
+      loadAyahAudio(nextAyah);
+      setIsPlaying(true);
     }
   };
 
@@ -203,18 +353,28 @@ export default function App() {
     const currentSurahObj = bySurahMap.get(playingAyah.sura);
     if (!currentSurahObj) return;
 
+    let prevAyah: Ayah | null = null;
     if (playingAyah.aya > 1) {
-      const prevAyah = currentSurahObj.verses.find(
-        (v) => v.aya === playingAyah.aya - 1
-      );
-      if (prevAyah) handlePlayAyah(prevAyah);
+      prevAyah = currentSurahObj.verses.find((v) => v.aya === playingAyah.aya - 1) ?? null;
     } else if (playingAyah.sura > 1) {
       const prevSurahObj = bySurahMap.get(playingAyah.sura - 1);
       if (prevSurahObj && prevSurahObj.verses.length > 0) {
         setSelectedSurahId(prevSurahObj.id);
-        const lastAyah = prevSurahObj.verses[prevSurahObj.verses.length - 1];
-        handlePlayAyah(lastAyah);
+        prevAyah = prevSurahObj.verses[prevSurahObj.verses.length - 1];
       }
+    }
+
+    if (prevAyah) {
+      setPlayingAyah(prevAyah);
+      loadAyahAudio(prevAyah);
+      setIsPlaying(true);
+    }
+  };
+
+  const handleSelectReciter = (id: string) => {
+    setReciterId(id);
+    if (playingAyah) {
+      loadAyahAudio(playingAyah, getReciter(id), isPlaying);
     }
   };
 
@@ -245,11 +405,6 @@ export default function App() {
     return new Set(bookmarks.map((b) => `${b.sura}:${b.aya}`));
   }, [bookmarks]);
 
-  const currentSurah = bySurahMap.get(selectedSurahId) || null;
-  const currentPlayingSurahMeta = playingAyah
-    ? surahs.find((s) => s.id === playingAyah.sura) || null
-    : null;
-
   return (
     <div className="min-h-screen flex flex-col bg-[#FBF9F5] text-stone-900 font-sans selection:bg-emerald-100 selection:text-emerald-900">
       {/* Top Bar Contract (3 zones) */}
@@ -257,6 +412,8 @@ export default function App() {
         currentView={currentView}
         onSelectView={(view) => setCurrentView(view)}
         onOpenDataModal={() => setIsDataModalOpen(true)}
+        theme={theme}
+        onSelectTheme={setTheme}
       />
 
       {/* Main Content Area */}
@@ -318,6 +475,8 @@ export default function App() {
                       ? () => setSelectedSurahId(selectedSurahId + 1)
                       : undefined
                   }
+                  reciterId={reciterId}
+                  onSelectReciter={handleSelectReciter}
                 />
               </div>
             )}
@@ -369,6 +528,26 @@ export default function App() {
         )}
       </main>
 
+      {/* Footer: اسم النطاق والوصف لتحسين الظهور في محركات البحث */}
+      <footer className="shrink-0 border-t border-stone-200 bg-[#FAF7F0] px-4 py-3 font-sans">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-right">
+          <div className="text-xs text-stone-600 leading-relaxed">
+            <span className="font-bold text-stone-800">
+              القرآن الكريم بالرسم العثماني
+            </span>
+            <span className="mx-1.5 text-stone-400">·</span>
+            <span>مصحف إلكتروني وقاعدة بيانات مفتوحة المصدر</span>
+          </div>
+          <div className="flex items-center gap-3 text-xs">
+            <span className="font-mono text-stone-500" dir="ltr">
+              quran.com.ly
+            </span>
+            <span className="hidden sm:inline text-stone-300">|</span>
+            <span className="text-stone-500">تلاوات بعدة قرّاء · بحث فوري · بيانات JSON</span>
+          </div>
+        </div>
+      </footer>
+
       {/* Persistent Audio Player Bar */}
       {playingAyah && (
         <AudioPlayerBar
@@ -376,10 +555,17 @@ export default function App() {
           currentSurah={currentPlayingSurahMeta}
           isPlaying={isPlaying}
           repeatMode={repeatMode}
+          reciterId={currentReciter.id}
+          audioError={audioError}
+          onSelectReciter={handleSelectReciter}
           onTogglePlay={() => {
-            if (audioRef.current) {
-              if (isPlaying) audioRef.current.pause();
-              else audioRef.current.play();
+            const audio = audioRef.current;
+            if (audio) {
+              if (isPlaying) audio.pause();
+              else
+                audio.play().catch(() => {
+                  /* ignore */
+                });
             }
           }}
           onNextAyah={handleNextAyah}

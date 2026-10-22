@@ -27,3 +27,6 @@ export interface Bookmark {
 export type ViewMode = 'surah' | 'search' | 'data' | 'bookmarks';
 export type ReadingDisplayMode = 'verses' | 'continuous';
 export type QuranFontChoice = 'uthman-taha' | 'hafs-v18' | 'amiri';
+
+export type ThemeMode = 'dark' | 'beige';
+

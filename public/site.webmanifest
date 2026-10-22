@@ -1,0 +1,20 @@
+{
+  "name": "القرآن الكريم بالرسم العثماني — quran.com.ly",
+  "short_name": "quran.com.ly",
+  "description": "مصحف إلكتروني شامل للقرآن الكريم بالرسم العثماني مع تلاوات صوتية بعدة قرّاء، بحث فوري، وفهرس للسور.",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0e1110",
+  "theme_color": "#0e1110",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -32,12 +32,36 @@ export function normalizeArabicText(text: string): string {
 }
 
 /**
- * Returns audio recitation URL from EveryAyah (Mishary Alafasy 128kbps)
+ * يحسب عدد الآيات التي تسبق كل سورة (0 لسورة الفاتحة) لتسهيل التحويل
+ * بين الترقيم المحلي (سورة:آية) والترقيم العام 1..6236 المستخدم في ملفات الصوت.
  */
-export function getAyahAudioUrl(sura: number, aya: number): string {
-  const sStr = String(sura).padStart(3, '0');
-  const aStr = String(aya).padStart(3, '0');
-  return `https://everyayah.com/data/Alafasy_128kbps/${sStr}${aStr}.mp3`;
+export function computeAyahOffsets(surahs: { id: number; total_verses: number }[]): number[] {
+  const offsets: number[] = [0, 0];
+  let accumulated = 0;
+  for (const surah of [...surahs].sort((a, b) => a.id - b.id)) {
+    offsets[surah.id] = accumulated;
+    accumulated += surah.total_verses;
+  }
+  return offsets;
+}
+
+/** يحوّل رقم الآية داخل سورتها إلى رقمها العام في المصحف (1..6236) */
+export function getGlobalAyahNumber(sura: number, aya: number, offsets: number[]): number {
+  return (offsets[sura] ?? 0) + aya;
+}
+
+/**
+ * يُنشئ روابط التلاوة الصوتية للآية حسب القارئ المختار، مرتبة حسب الجودة.
+ * المصدر: شبكة islamic.network (تلاوات آية بآية للقرّاء المعتمدين).
+ */
+export function getAyahAudioUrls(
+  reciter: { id: string; bitrates: number[] },
+  globalAyahNumber: number
+): string[] {
+  return reciter.bitrates.map(
+    (bitrate) =>
+      `https://cdn.islamic.network/quran/audio/${bitrate}/${reciter.id}/${globalAyahNumber}.mp3`
+  );
 }
 
 /**

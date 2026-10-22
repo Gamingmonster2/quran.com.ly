@@ -68,3 +68,128 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(120, 113, 108, 0.45);
 }
+
+/* ==========================================================================
+   نظام السمات: الوضع الليلي (الافتراضي) والوضع البيج المريح للعين
+   يعتمد على إعادة تعريف متغيرات ألوان Tailwind داخل نطاق السمة، لذلك تتبدل
+   جميع مكوّنات الواجهة تلقائياً دون تكرار الأصناف في كل مكوّن.
+   ========================================================================== */
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* لوحة الألوان الرمادية الدافئة (stone) مقلوبة لخلفية ليلية */
+  --color-white: #171d1a;
+  --color-stone-50: #1c2320;
+  --color-stone-100: #242c27;
+  --color-stone-200: #2f3733;
+  --color-stone-300: #4b554e;
+  --color-stone-400: #8b8577;
+  --color-stone-500: #a49d8e;
+  --color-stone-600: #bcb5a5;
+  --color-stone-700: #d2cbba;
+  --color-stone-800: #e1dbcb;
+  --color-stone-900: #efeade;
+  --color-stone-950: #f8f4e9;
+
+  /* الأخضر الزمردي للواجهة */
+  --color-emerald-50: #12251c;
+  --color-emerald-100: #173326;
+  --color-emerald-600: #4fae83;
+  --color-emerald-700: #66c196;
+  --color-emerald-800: #7fd4a8;
+  --color-emerald-900: #93dcb4;
+  --color-emerald-950: #b9ecd0;
+
+  /* الكهرماني للآية قيد التشغيل */
+  --color-amber-50: #2a2113;
+  --color-amber-100: #332817;
+  --color-amber-300: #8a6e35;
+  --color-amber-500: #d1a052;
+  --color-amber-600: #dcae5e;
+  --color-amber-700: #e9c47f;
+  --color-amber-800: #f0d59d;
+  --color-amber-950: #f7e6c2;
+
+  /* الأحمر للتنبيهات */
+  --color-red-50: #2b1616;
+  --color-red-500: #f08d8d;
+  --color-red-700: #f5a8a8;
+
+  --th-page: #0e1110;
+  --th-btn-text: #14170f;
+  --th-code-bg: #0a0c0b;
+  --th-code-text: #dfe4dd;
+}
+
+html[data-theme='beige'] {
+  color-scheme: light;
+
+  --color-white: #fffaf0;
+  --th-page: #f7f1e3;
+  --th-btn-text: #ffffff;
+  --th-code-bg: #14110c;
+  --th-code-text: #f4efe3;
+}
+
+/* صفحات وخلفيات الواجهة */
+html[data-theme='dark'] body,
+html[data-theme='beige'] body {
+  background-color: var(--th-page);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+html[data-theme='dark'] .bg-\[\#FBF9F5\],
+html[data-theme='beige'] .bg-\[\#FBF9F5\] {
+  background-color: var(--th-page);
+}
+
+html[data-theme='dark'] .bg-\[\#FBF9F5\]\/90,
+html[data-theme='beige'] .bg-\[\#FBF9F5\]\/90 {
+  background-color: color-mix(in srgb, var(--th-page) 90%, transparent);
+}
+
+html[data-theme='dark'] .bg-\[\#F7F4EE\] {
+  background-color: #121614;
+}
+html[data-theme='beige'] .bg-\[\#F7F4EE\] {
+  background-color: #f2ead9;
+}
+
+html[data-theme='dark'] .bg-\[\#FAF7F0\],
+html[data-theme='dark'] .bg-\[\#F6F2EA\] {
+  background-color: #1a1f1c;
+}
+html[data-theme='beige'] .bg-\[\#FAF7F0\] {
+  background-color: #f8f0de;
+}
+html[data-theme='beige'] .bg-\[\#F6F2EA\] {
+  background-color: #f4ecdb;
+}
+
+/* النصوص والأزرار الأساسية والشرائح البرمجية */
+html[data-theme] .text-white,
+html[data-theme] .text-\[\#FBF9F5\] {
+  color: var(--th-btn-text);
+}
+
+html[data-theme] .bg-stone-950 {
+  background-color: var(--th-code-bg);
+}
+
+html[data-theme] .text-stone-100 {
+  color: var(--th-code-text);
+}
+
+html[data-theme] .bg-white\/95 {
+  background-color: color-mix(in srgb, var(--color-white) 95%, transparent);
+}
+
+/* أشرطة التمرير */
+html[data-theme] ::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-stone-400) 35%, transparent);
+}
+html[data-theme] ::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--color-stone-400) 60%, transparent);
+}
+

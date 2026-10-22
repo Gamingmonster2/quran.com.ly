@@ -1,7 +1,8 @@
-import React from 'react';
-import { Play, Pause, ChevronRight, ChevronLeft, Type, AlignLeft, ListOrdered } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Play, Pause, ChevronRight, ChevronLeft, Type, AlignLeft, ListOrdered, Volume2 } from 'lucide-react';
 import { SurahWithVerses, Ayah, ReadingDisplayMode, QuranFontChoice } from '../types/quran.ts';
 import { toArabicDigits } from '../utils/quranHelpers.ts';
+import { RECITERS } from '../utils/reciters.ts';
 import { VerseCard } from './VerseCard.tsx';
 import { MushafContinuous } from './MushafContinuous.tsx';
 
@@ -21,6 +22,8 @@ interface ReaderViewProps {
   onToggleBookmark: (ayah: Ayah) => void;
   onPrevSurah?: () => void;
   onNextSurah?: () => void;
+  reciterId: string;
+  onSelectReciter: (reciterId: string) => void;
 }
 
 export const ReaderView: React.FC<ReaderViewProps> = ({
@@ -39,9 +42,24 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   onToggleBookmark,
   onPrevSurah,
   onNextSurah,
+  reciterId,
+  onSelectReciter,
 }) => {
   const isPlayingThisSurah = isPlaying && playingAyah?.sura === surah.id;
   const showBismillah = surah.id !== 9 && surah.id !== 1; // Surah 1 includes Bismillah as verse 1; Surah 9 doesn't have Bismillah
+
+  // تتبع الآية قيد التلاوة والتمرير إليها تلقائياً أثناء التشغيل المتسلسل
+  useEffect(() => {
+    if (!isPlaying || !playingAyah || playingAyah.sura !== surah.id) return;
+    const elementId =
+      displayMode === 'continuous'
+        ? `continuous-ayah-${surah.id}-${playingAyah.aya}`
+        : `ayah-${surah.id}-${playingAyah.aya}`;
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [playingAyah, isPlaying, surah.id, displayMode]);
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
@@ -117,8 +135,25 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           </button>
         </div>
 
-        {/* Font Selector & Size Adjuster */}
+        {/* Reciter Selector & Font Selector & Size Adjuster */}
         <div className="flex flex-wrap items-center gap-3">
+          {/* Reciter Selector */}
+          <div className="flex items-center gap-1.5 text-stone-700">
+            <Volume2 className="w-4 h-4 text-stone-400" />
+            <span>القارئ:</span>
+            <select
+              value={reciterId}
+              onChange={(e) => onSelectReciter(e.target.value)}
+              className="bg-white border border-stone-300 rounded-lg px-2.5 py-1 text-xs text-stone-800 focus:outline-none focus:ring-1 focus:ring-stone-800 max-w-[11rem]"
+            >
+              {RECITERS.map((reciter) => (
+                <option key={reciter.id} value={reciter.id}>
+                  {reciter.arabicName}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Font Selector */}
           <div className="flex items-center gap-1.5 text-stone-700">
             <span>الخط:</span>
