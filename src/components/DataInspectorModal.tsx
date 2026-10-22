@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+﻿import React, { useEffect, useId, useRef, useState } from 'react';
 import { Download, FileJson, Copy, Check, ExternalLink, Code2, Database, Type } from 'lucide-react';
 import { Ayah, SurahMeta } from '../types/quran.ts';
 import { toArabicDigits } from '../utils/quranHelpers.ts';
@@ -718,7 +718,7 @@ module.exports = {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full">
       <div className="bg-white border border-stone-200/90 rounded-2xl p-6 sm:p-8 shadow-xs">
         {content}
       </div>

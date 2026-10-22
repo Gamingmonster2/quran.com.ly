@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Bookmark, Trash2, ArrowLeft, Play } from 'lucide-react';
 import { Bookmark as BookmarkType, Ayah } from '../types/quran.ts';
 import { toArabicDigits } from '../utils/quranHelpers.ts';
@@ -17,7 +17,7 @@ export const BookmarksView: React.FC<BookmarksViewProps> = ({
   onPlayAyah,
 }) => {
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full">
       <div className="bg-white border border-stone-200/90 rounded-2xl p-6 sm:p-8 shadow-xs mb-6 text-right">
         <div className="flex items-center justify-between">
           <div className="p-2.5 rounded-xl bg-amber-50 text-amber-700">

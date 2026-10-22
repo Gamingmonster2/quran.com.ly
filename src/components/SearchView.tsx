@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { Search, Play, ArrowLeft } from 'lucide-react';
 import { Ayah, SurahMeta } from '../types/quran.ts';
 import { toArabicDigits } from '../utils/quranHelpers.ts';
@@ -48,7 +48,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
   }, [searchIndex, searchTerm, selectedSurahFilter, surahMap]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full">
       {/* Search Header */}
       <div className="bg-white border border-stone-200/90 rounded-2xl p-6 sm:p-8 shadow-xs mb-6">
         <h2 className="text-2xl font-bold font-quran text-stone-900 mb-2 text-right">

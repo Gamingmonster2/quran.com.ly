@@ -40,6 +40,9 @@ const WORDS_PREF_KEY = 'quran_show_words';
 const INITIAL_ROUTE: Route = parseLocation(window.location.pathname);
 const INITIAL_SURAH_ID =
   INITIAL_ROUTE.name === 'surah' ? INITIAL_ROUTE.surahId : 1;
+// في الجوال: فهرس السور أولًا عند فتح الرئيسية، والقارئ مباشرة عند فتح سورة/آية برابط
+const INITIAL_MOBILE_PANE: 'list' | 'reader' =
+  INITIAL_ROUTE.name === 'surah' && routeToPath(INITIAL_ROUTE) !== '/' ? 'reader' : 'list';
 
 const HOME_TITLE = 'القرآن الكريم بالرسم العثماني — مصحف إلكتروني وتلاوات | quran.com.ly';
 const HOME_DESCRIPTION =
@@ -51,6 +54,8 @@ export default function App() {
   const [bySurahMap, setBySurahMap] = useState<Map<number, SurahWithVerses>>(new Map());
   const [route, setRoute] = useState<Route>(INITIAL_ROUTE);
   const [selectedSurahId, setSelectedSurahId] = useState<number>(INITIAL_SURAH_ID);
+  // في الجوال يظهر إما فهرس السور أو القارئ (لا الاثنان معًا)
+  const [mobilePane, setMobilePane] = useState<'list' | 'reader'>(INITIAL_MOBILE_PANE);
   const [displayMode, setDisplayMode] = useState<ReadingDisplayMode>('verses');
   const [fontSize, setFontSize] = useState<number>(26);
   const [fontChoice, setFontChoice] = useState<QuranFontChoice>('uthman-taha');
@@ -157,7 +162,10 @@ export default function App() {
     const handlePopState = () => {
       const next = parseLocation(window.location.pathname);
       setRoute(next);
-      if (next.name === 'surah') setSelectedSurahId(next.surahId);
+      if (next.name === 'surah') {
+        setSelectedSurahId(next.surahId);
+        if (next.ayahId) setMobilePane('reader');
+      }
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -536,6 +544,7 @@ export default function App() {
   const handleSelectView = (view: ViewMode) => {
     switch (view) {
       case 'surah':
+        setMobilePane('list');
         navigate({ name: 'surah', surahId: selectedSurahId });
         break;
       case 'search':
@@ -551,11 +560,13 @@ export default function App() {
   };
 
   const handleSelectSurah = (id: number) => {
+    setMobilePane('reader');
     navigate({ name: 'surah', surahId: id });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleOpenAyah = (suraId: number, ayaNum: number) => {
+    setMobilePane('reader');
     navigate({ name: 'surah', surahId: suraId, ayahId: ayaNum });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -678,7 +689,7 @@ export default function App() {
   }, [bookmarks]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FBF9F5] text-stone-900 font-sans selection:bg-emerald-100 selection:text-emerald-900">
+    <div className="h-dvh min-h-0 flex flex-col overflow-hidden bg-[#FBF9F5] text-stone-900 font-sans selection:bg-emerald-100 selection:text-emerald-900">
       <Header
         currentView={currentView}
         onSelectView={handleSelectView}
@@ -689,13 +700,15 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex overflow-hidden">
+      <main className="flex-1 min-h-0 flex overflow-hidden">
         {isStaticPageRoute(route) ? (
           <>
             {/* الصفحات التعريفية لا تحتاج بيانات القرآن فلا ينتظرها سبينر التحميل */}
-            {route.name === 'about' && <AboutPage />}
-            {route.name === 'sources' && <SourcesPage />}
-            {route.name === 'contact' && <ContactPage />}
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              {route.name === 'about' && <AboutPage />}
+              {route.name === 'sources' && <SourcesPage />}
+              {route.name === 'contact' && <ContactPage />}
+            </div>
           </>
         ) : isLoading ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-4">
@@ -717,46 +730,61 @@ export default function App() {
         ) : (
           <>
             {route.name === 'surah' && currentSurah && (
-              <div className="flex-1 flex flex-col md:flex-row w-full overflow-hidden">
-                <SurahList
-                  surahs={surahs}
-                  selectedSurahId={selectedSurahId}
-                  onSelectSurah={handleSelectSurah}
-                />
+              <div className="flex-1 flex flex-col md:flex-row w-full min-h-0 overflow-hidden">
+                {/* فهرس السور: في الجوال يظهر لوحده حتى اختيار سورة */}
+                <div
+                  className={`${
+                    mobilePane === 'list' ? 'flex' : 'hidden'
+                  } md:flex w-full md:w-auto flex-1 md:flex-none flex-col min-h-0 overflow-hidden`}
+                >
+                  <SurahList
+                    surahs={surahs}
+                    selectedSurahId={selectedSurahId}
+                    onSelectSurah={handleSelectSurah}
+                  />
+                </div>
 
-                <ReaderView
-                  surah={currentSurah}
-                  fontSize={fontSize}
-                  setFontSize={setFontSize}
-                  fontChoice={fontChoice}
-                  setFontChoice={setFontChoice}
-                  displayMode={displayMode}
-                  setDisplayMode={setDisplayMode}
-                  playingAyah={playingAyah}
-                  isPlaying={isPlaying}
-                  bookmarkedAyahs={bookmarkedAyahsSet}
-                  onPlayAyah={handlePlayAyah}
-                  onPlayEntireSurah={handlePlayEntireSurah}
-                  onToggleBookmark={handleToggleBookmark}
-                  onPrevSurah={
-                    selectedSurahId > 1
-                      ? () => handleSelectSurah(selectedSurahId - 1)
-                      : undefined
-                  }
-                  onNextSurah={
-                    selectedSurahId < 114
-                      ? () => handleSelectSurah(selectedSurahId + 1)
-                      : undefined
-                  }
-                  reciterId={reciterId}
-                  onSelectReciter={handleSelectReciter}
-                  showTranslation={showTranslation}
-                  onToggleTranslation={() => setShowTranslation((value) => !value)}
-                  showTafsir={showTafsir}
-                  onToggleTafsir={() => setShowTafsir((value) => !value)}
-                  showWordByWord={showWordByWord}
-                  onToggleWordByWord={() => setShowWordByWord((value) => !value)}
-                />
+                {/* القارئ: في الجوال يظهر بعد اختيار السورة */}
+                <div
+                  className={`${
+                    mobilePane === 'reader' ? 'flex' : 'hidden'
+                  } md:flex flex-1 flex-col min-h-0 overflow-hidden`}
+                >
+                  <ReaderView
+                    surah={currentSurah}
+                    fontSize={fontSize}
+                    setFontSize={setFontSize}
+                    fontChoice={fontChoice}
+                    setFontChoice={setFontChoice}
+                    displayMode={displayMode}
+                    setDisplayMode={setDisplayMode}
+                    playingAyah={playingAyah}
+                    isPlaying={isPlaying}
+                    bookmarkedAyahs={bookmarkedAyahsSet}
+                    onPlayAyah={handlePlayAyah}
+                    onPlayEntireSurah={handlePlayEntireSurah}
+                    onToggleBookmark={handleToggleBookmark}
+                    onPrevSurah={
+                      selectedSurahId > 1
+                        ? () => handleSelectSurah(selectedSurahId - 1)
+                        : undefined
+                    }
+                    onNextSurah={
+                      selectedSurahId < 114
+                        ? () => handleSelectSurah(selectedSurahId + 1)
+                        : undefined
+                    }
+                    reciterId={reciterId}
+                    onSelectReciter={handleSelectReciter}
+                    showTranslation={showTranslation}
+                    onToggleTranslation={() => setShowTranslation((value) => !value)}
+                    showTafsir={showTafsir}
+                    onToggleTafsir={() => setShowTafsir((value) => !value)}
+                    showWordByWord={showWordByWord}
+                    onToggleWordByWord={() => setShowWordByWord((value) => !value)}
+                    onBackToSurahList={() => setMobilePane('list')}
+                  />
+                </div>
               </div>
             )}
 
@@ -787,7 +815,7 @@ export default function App() {
             )}
 
             {route.name === 'notFound' && (
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto w-full">
+              <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto w-full">
                 <div className="bg-white border border-stone-200/90 rounded-2xl p-8 sm:p-10 shadow-xs text-center space-y-4">
                   <div className="text-5xl font-bold font-quran text-stone-300">٤٠٤</div>
                   <h1 className="text-2xl font-bold font-quran text-stone-900">
@@ -811,8 +839,8 @@ export default function App() {
       </main>
 
       {/* Footer: اسم النطاق والوصف وروابط الصفحات التعريفية */}
-      <footer className="shrink-0 border-t border-stone-200 bg-[#FAF7F0] px-4 py-3 font-sans">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-right">
+      <footer className="shrink-0 border-t border-stone-200 bg-[#FAF7F0] px-3 py-2 sm:px-4 sm:py-3 font-sans">
+        <div className="hidden sm:flex max-w-7xl mx-auto flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-right">
           <div className="text-xs text-stone-600 leading-relaxed">
             <span className="font-bold text-stone-800">
               القرآن الكريم بالرسم العثماني
@@ -832,8 +860,12 @@ export default function App() {
         {/* روابط الصفحات التعريفية */}
         <nav
           aria-label="صفحات الموقع"
-          className="max-w-7xl mx-auto mt-2 pt-2 border-t border-stone-200/70 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] sm:text-xs text-stone-500"
+          className="max-w-7xl mx-auto sm:mt-2 sm:pt-2 sm:border-t sm:border-stone-200/70 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] sm:text-xs text-stone-500"
         >
+          <span className="sm:hidden font-mono text-stone-500" dir="ltr">
+            quran.com.ly
+          </span>
+          <span aria-hidden="true" className="sm:hidden">|</span>
           <button
             onClick={() => navigate({ name: 'about' })}
             className="hover:text-emerald-900 transition-colors"
@@ -864,7 +896,7 @@ export default function App() {
         </nav>
 
         {/* إشارة بسيطة إلى المساعدة الأولية في جلب ملفات البيانات */}
-        <div className="max-w-7xl mx-auto mt-2 text-center text-[10px] sm:text-[11px] leading-relaxed text-stone-400">
+        <div className="max-w-7xl mx-auto mt-1 sm:mt-2 text-center text-[9px] sm:text-[11px] leading-snug sm:leading-relaxed text-stone-400">
           بدأ المشروع بمساعدة أدوات Google AI Studio في جلب بيانات القرآن بصيغة JSON، ثم أُكمل تطويره
           وصيانته من صاحب المشروع.
         </div>

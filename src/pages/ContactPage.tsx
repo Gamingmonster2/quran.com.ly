@@ -1,4 +1,4 @@
-import {
+﻿import {
   Bug,
   ExternalLink as ExternalLinkIcon,
   GitPullRequest,
@@ -63,7 +63,7 @@ function LinkButton({
 
 export default function ContactPage() {
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full">
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full">
       <div className="bg-white border border-stone-200/90 rounded-2xl p-6 sm:p-8 shadow-xs space-y-8">
         {/* ترويسة الصفحة */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-200">

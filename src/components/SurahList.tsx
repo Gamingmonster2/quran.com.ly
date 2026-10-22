@@ -41,7 +41,7 @@ export const SurahList: React.FC<SurahListProps> = ({
   return (
     <aside
       aria-label="فهرس سور القرآن الكريم"
-      className="w-full md:w-80 lg:w-96 shrink-0 bg-[#F7F4EE] border-l border-stone-200 flex flex-col h-[calc(100vh-4rem)]"
+      className="w-full md:w-80 lg:w-96 shrink-0 bg-[#F7F4EE] border-l border-stone-200 flex flex-col h-full min-h-0"
     >
       {/* Search & Filter Header */}
       <div className="p-4 border-b border-stone-200 bg-[#FAF7F0] space-y-3">
