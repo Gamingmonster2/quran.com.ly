@@ -33,6 +33,9 @@ import { DEFAULT_RECITER_ID, RECITERS, getReciter } from './utils/reciters.ts';
 
 const THEME_STORAGE_KEY = 'quran_theme';
 const RECITER_STORAGE_KEY = 'quran_reciter';
+const TRANSLATION_PREF_KEY = 'quran_show_translation';
+const TAFSIR_PREF_KEY = 'quran_show_tafsir';
+const WORDS_PREF_KEY = 'quran_show_words';
 
 const INITIAL_ROUTE: Route = parseLocation(window.location.pathname);
 const INITIAL_SURAH_ID =
@@ -75,6 +78,29 @@ export default function App() {
     }
   });
   const [audioError, setAudioError] = useState<string | null>(null);
+
+  // تفضيلات المحتوى الإضافي: ترجمة / تفسير / كلمة بكلمة (محفوظة في المتصفح)
+  const [showTranslation, setShowTranslation] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(TRANSLATION_PREF_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [showTafsir, setShowTafsir] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(TAFSIR_PREF_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [showWordByWord, setShowWordByWord] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(WORDS_PREF_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
 
   // Audio Playback State
   const [playingAyah, setPlayingAyah] = useState<Ayah | null>(null);
@@ -211,6 +237,17 @@ export default function App() {
       /* ignore */
     }
   }, [reciterId]);
+
+  // حفظ تفضيلات المحتوى الإضافي
+  useEffect(() => {
+    try {
+      localStorage.setItem(TRANSLATION_PREF_KEY, showTranslation ? '1' : '0');
+      localStorage.setItem(TAFSIR_PREF_KEY, showTafsir ? '1' : '0');
+      localStorage.setItem(WORDS_PREF_KEY, showWordByWord ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }, [showTranslation, showTafsir, showWordByWord]);
 
   // Sync bookmarks to localStorage
   useEffect(() => {
@@ -713,6 +750,12 @@ export default function App() {
                   }
                   reciterId={reciterId}
                   onSelectReciter={handleSelectReciter}
+                  showTranslation={showTranslation}
+                  onToggleTranslation={() => setShowTranslation((value) => !value)}
+                  showTafsir={showTafsir}
+                  onToggleTafsir={() => setShowTafsir((value) => !value)}
+                  showWordByWord={showWordByWord}
+                  onToggleWordByWord={() => setShowWordByWord((value) => !value)}
                 />
               </div>
             )}

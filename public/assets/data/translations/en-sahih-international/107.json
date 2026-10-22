@@ -1,0 +1,39 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 107,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "Have you seen the one who denies the Recompense?"
+    },
+    {
+      "aya": 2,
+      "text": "For that is the one who drives away the orphan"
+    },
+    {
+      "aya": 3,
+      "text": "And does not encourage the feeding of the poor."
+    },
+    {
+      "aya": 4,
+      "text": "So woe to those who pray"
+    },
+    {
+      "aya": 5,
+      "text": "[But] who are heedless of their prayer -"
+    },
+    {
+      "aya": 6,
+      "text": "Those who make show [of their deeds]"
+    },
+    {
+      "aya": 7,
+      "text": "And withhold [simple] assistance."
+    }
+  ]
+}

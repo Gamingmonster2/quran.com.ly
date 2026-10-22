@@ -1,0 +1,31 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 111,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "May the hands of Abū Lahab be ruined, and ruined is he."
+    },
+    {
+      "aya": 2,
+      "text": "His wealth will not avail him or that which he gained."
+    },
+    {
+      "aya": 3,
+      "text": "He will [enter to] burn in a Fire of [blazing] flame"
+    },
+    {
+      "aya": 4,
+      "text": "And his wife [as well] - the carrier of firewood."
+    },
+    {
+      "aya": 5,
+      "text": "Around her neck is a rope of [twisted] fiber."
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 99,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "When the earth is shaken with its [final] earthquake"
+    },
+    {
+      "aya": 2,
+      "text": "And the earth discharges its burdens"
+    },
+    {
+      "aya": 3,
+      "text": "And man says, \"What is [wrong] with it?\" -"
+    },
+    {
+      "aya": 4,
+      "text": "That Day, it will report its news"
+    },
+    {
+      "aya": 5,
+      "text": "Because your Lord has inspired [i.e., commanded] it."
+    },
+    {
+      "aya": 6,
+      "text": "That Day, the people will depart separated [into categories] to be shown [the result of] their deeds."
+    },
+    {
+      "aya": 7,
+      "text": "So whoever does an atom's weight of good will see it,"
+    },
+    {
+      "aya": 8,
+      "text": "And whoever does an atom's weight of evil will see it."
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 110,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "When the victory of Allāh has come and the conquest,"
+    },
+    {
+      "aya": 2,
+      "text": "And you see the people entering into the religion of Allāh in multitudes,"
+    },
+    {
+      "aya": 3,
+      "text": "Then exalt [Him] with praise of your Lord and ask forgiveness of Him. Indeed, He is ever Accepting of Repentance."
+    }
+  ]
+}

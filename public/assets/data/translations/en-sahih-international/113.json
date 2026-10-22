@@ -1,0 +1,31 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 113,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "Say, \"I seek refuge in the Lord of daybreak"
+    },
+    {
+      "aya": 2,
+      "text": "From the evil of that which He created"
+    },
+    {
+      "aya": 3,
+      "text": "And from the evil of darkness when it settles"
+    },
+    {
+      "aya": 4,
+      "text": "And from the evil of the blowers in knots"
+    },
+    {
+      "aya": 5,
+      "text": "And from the evil of an envier when he envies.\""
+    }
+  ]
+}

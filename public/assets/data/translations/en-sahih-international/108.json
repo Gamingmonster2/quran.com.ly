@@ -1,0 +1,23 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 108,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "Indeed, We have granted you, [O Muḥammad], al-Kawthar."
+    },
+    {
+      "aya": 2,
+      "text": "So pray to your Lord and offer sacrifice [to Him alone]."
+    },
+    {
+      "aya": 3,
+      "text": "Indeed, your enemy is the one cut off."
+    }
+  ]
+}

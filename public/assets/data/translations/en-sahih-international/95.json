@@ -1,0 +1,43 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 95,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "By the fig and the olive"
+    },
+    {
+      "aya": 2,
+      "text": "And [by] Mount Sinai"
+    },
+    {
+      "aya": 3,
+      "text": "And [by] this secure city [i.e., Makkah],"
+    },
+    {
+      "aya": 4,
+      "text": "We have certainly created man in the best of stature;"
+    },
+    {
+      "aya": 5,
+      "text": "Then We return him to the lowest of the low,"
+    },
+    {
+      "aya": 6,
+      "text": "Except for those who believe and do righteous deeds, for they will have a reward uninterrupted."
+    },
+    {
+      "aya": 7,
+      "text": "So what yet causes you to deny the Recompense?"
+    },
+    {
+      "aya": 8,
+      "text": "Is not Allāh the most just of judges?"
+    }
+  ]
+}

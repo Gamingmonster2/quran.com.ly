@@ -1,0 +1,31 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 105,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "Have you not considered, [O Muḥammad], how your Lord dealt with the companions of the elephant?"
+    },
+    {
+      "aya": 2,
+      "text": "Did He not make their plan into misguidance?"
+    },
+    {
+      "aya": 3,
+      "text": "And He sent against them birds in flocks,"
+    },
+    {
+      "aya": 4,
+      "text": "Striking them with stones of hard clay,"
+    },
+    {
+      "aya": 5,
+      "text": "And He made them like eaten straw."
+    }
+  ]
+}

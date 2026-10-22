@@ -1,0 +1,39 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 1,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "In the name of Allāh, the Entirely Merciful, the Especially Merciful."
+    },
+    {
+      "aya": 2,
+      "text": "[All] praise is [due] to Allāh, Lord of the worlds -"
+    },
+    {
+      "aya": 3,
+      "text": "The Entirely Merciful, the Especially Merciful,"
+    },
+    {
+      "aya": 4,
+      "text": "Sovereign of the Day of Recompense."
+    },
+    {
+      "aya": 5,
+      "text": "It is You we worship and You we ask for help."
+    },
+    {
+      "aya": 6,
+      "text": "Guide us to the straight path -"
+    },
+    {
+      "aya": 7,
+      "text": "The path of those upon whom You have bestowed favor, not of those who have earned [Your] anger or of those who are astray."
+    }
+  ]
+}

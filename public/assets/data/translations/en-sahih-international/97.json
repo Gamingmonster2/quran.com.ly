@@ -1,0 +1,31 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 97,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "Indeed, We sent it [i.e., the Qur’ān] down during the Night of Decree."
+    },
+    {
+      "aya": 2,
+      "text": "And what can make you know what is the Night of Decree?"
+    },
+    {
+      "aya": 3,
+      "text": "The Night of Decree is better than a thousand months."
+    },
+    {
+      "aya": 4,
+      "text": "The angels and the Spirit [i.e., Gabriel] descend therein by permission of their Lord for every matter."
+    },
+    {
+      "aya": 5,
+      "text": "Peace it is until the emergence of dawn."
+    }
+  ]
+}

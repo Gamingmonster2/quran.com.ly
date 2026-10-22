@@ -1,0 +1,27 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 112,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "Say, \"He is Allāh, [who is] One,"
+    },
+    {
+      "aya": 2,
+      "text": "Allāh, the Eternal Refuge."
+    },
+    {
+      "aya": 3,
+      "text": "He neither begets nor is born,"
+    },
+    {
+      "aya": 4,
+      "text": "Nor is there to Him any equivalent.\""
+    }
+  ]
+}

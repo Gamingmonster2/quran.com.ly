@@ -1,0 +1,35 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 114,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "Say, \"I seek refuge in the Lord of mankind,"
+    },
+    {
+      "aya": 2,
+      "text": "The Sovereign of mankind,"
+    },
+    {
+      "aya": 3,
+      "text": "The God of mankind,"
+    },
+    {
+      "aya": 4,
+      "text": "From the evil of the retreating whisperer -"
+    },
+    {
+      "aya": 5,
+      "text": "Who whispers [evil] into the breasts of mankind -"
+    },
+    {
+      "aya": 6,
+      "text": "From among the jinn and mankind\"."
+    }
+  ]
+}

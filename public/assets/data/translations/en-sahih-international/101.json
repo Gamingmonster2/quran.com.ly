@@ -1,0 +1,55 @@
+{
+  "edition": {
+    "id": 20,
+    "name": "Saheeh International",
+    "language": "en",
+    "direction": "ltr"
+  },
+  "surahId": 101,
+  "ayahs": [
+    {
+      "aya": 1,
+      "text": "The Striking Calamity -"
+    },
+    {
+      "aya": 2,
+      "text": "What is the Striking Calamity?"
+    },
+    {
+      "aya": 3,
+      "text": "And what can make you know what is the Striking Calamity?"
+    },
+    {
+      "aya": 4,
+      "text": "It is the Day when people will be like moths, dispersed,"
+    },
+    {
+      "aya": 5,
+      "text": "And the mountains will be like wool, fluffed up."
+    },
+    {
+      "aya": 6,
+      "text": "Then as for one whose scales are heavy [with good deeds],"
+    },
+    {
+      "aya": 7,
+      "text": "He will be in a pleasant life."
+    },
+    {
+      "aya": 8,
+      "text": "But as for one whose scales are light,"
+    },
+    {
+      "aya": 9,
+      "text": "His refuge will be an abyss."
+    },
+    {
+      "aya": 10,
+      "text": "And what can make you know what that is?"
+    },
+    {
+      "aya": 11,
+      "text": "It is a Fire, intensely hot."
+    }
+  ]
+}

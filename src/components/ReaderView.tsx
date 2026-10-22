@@ -1,14 +1,68 @@
-import React, { useEffect, useId } from 'react';
-import { Play, Pause, ChevronRight, ChevronLeft, Type, AlignLeft, ListOrdered, Volume2 } from 'lucide-react';
-import { SurahWithVerses, Ayah, ReadingDisplayMode, QuranFontChoice } from '../types/quran.ts';
+import React, { useEffect, useId, useState } from 'react';
+import {
+  Play,
+  Pause,
+  ChevronRight,
+  ChevronLeft,
+  Type,
+  AlignLeft,
+  ListOrdered,
+  Volume2,
+  Languages,
+  BookOpen,
+  Grid3X3,
+} from 'lucide-react';
+import {
+  SurahWithVerses,
+  Ayah,
+  ReadingDisplayMode,
+  QuranFontChoice,
+  WordEntry,
+} from '../types/quran.ts';
 import { toArabicDigits } from '../utils/quranHelpers.ts';
 import { RECITERS } from '../utils/reciters.ts';
+import {
+  loadSurahTafsir,
+  loadSurahTranslation,
+  loadSurahWords,
+} from '../utils/contentData.ts';
 import { VerseCard } from './VerseCard.tsx';
 import { MushafContinuous } from './MushafContinuous.tsx';
 
 // حلقة تركيز موحّدة وواضحة لمستخدمي لوحة المفاتيح
 const FOCUS_RING =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500';
+
+interface ToolbarToggleProps {
+  active: boolean;
+  label: string;
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}
+
+const ToolbarToggle: React.FC<ToolbarToggleProps> = ({
+  active,
+  label,
+  title,
+  onClick,
+  children,
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-pressed={active}
+    title={title}
+    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${FOCUS_RING} ${
+      active
+        ? 'bg-white text-stone-900 shadow-xs'
+        : 'text-stone-600 hover:text-stone-900'
+    }`}
+  >
+    <span aria-hidden="true">{children}</span>
+    <span>{label}</span>
+  </button>
+);
 
 interface ReaderViewProps {
   surah: SurahWithVerses;
@@ -28,6 +82,12 @@ interface ReaderViewProps {
   onNextSurah?: () => void;
   reciterId: string;
   onSelectReciter: (reciterId: string) => void;
+  showTranslation: boolean;
+  onToggleTranslation: () => void;
+  showTafsir: boolean;
+  onToggleTafsir: () => void;
+  showWordByWord: boolean;
+  onToggleWordByWord: () => void;
 }
 
 export const ReaderView: React.FC<ReaderViewProps> = ({
@@ -48,9 +108,84 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   onNextSurah,
   reciterId,
   onSelectReciter,
+  showTranslation,
+  onToggleTranslation,
+  showTafsir,
+  onToggleTafsir,
+  showWordByWord,
+  onToggleWordByWord,
 }) => {
   const isPlayingThisSurah = isPlaying && playingAyah?.sura === surah.id;
   const showBismillah = surah.id !== 9 && surah.id !== 1; // Surah 1 includes Bismillah as verse 1; Surah 9 doesn't have Bismillah
+
+  // بيانات المحتوى الإضافي المحمّلة لهذه السورة (تُطلب فقط عند تفعيل الميزة)
+  const [translationByAyah, setTranslationByAyah] = useState<Map<number, string> | null>(null);
+  const [tafsirByAyah, setTafsirByAyah] = useState<Map<number, string> | null>(null);
+  const [wordsByAyah, setWordsByAyah] = useState<Map<number, WordEntry[]> | null>(null);
+  const [contentNotice, setContentNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!showTranslation) {
+      setTranslationByAyah(null);
+      return;
+    }
+    let cancelled = false;
+    setContentNotice(null);
+    loadSurahTranslation(surah.id)
+      .then((data) => {
+        if (!cancelled) {
+          setTranslationByAyah(new Map(data.ayahs.map((item) => [item.aya, item.text])));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setContentNotice('تعذّر تحميل الترجمة لهذه السورة.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [surah.id, showTranslation]);
+
+  useEffect(() => {
+    if (!showTafsir) {
+      setTafsirByAyah(null);
+      return;
+    }
+    let cancelled = false;
+    setContentNotice(null);
+    loadSurahTafsir(surah.id)
+      .then((data) => {
+        if (!cancelled) {
+          setTafsirByAyah(new Map(data.ayahs.map((item) => [item.aya, item.text])));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setContentNotice('تعذّر تحميل التفسير لهذه السورة.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [surah.id, showTafsir]);
+
+  useEffect(() => {
+    if (!showWordByWord) {
+      setWordsByAyah(null);
+      return;
+    }
+    let cancelled = false;
+    setContentNotice(null);
+    loadSurahWords(surah.id)
+      .then((data) => {
+        if (!cancelled) {
+          setWordsByAyah(new Map(data.words.map((item) => [item.aya, item.entries])));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setContentNotice('تعذّر تحميل الترجمة كلمة بكلمة لهذه السورة.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [surah.id, showWordByWord]);
 
   // معرّفات فريدة تربط التسميات المرئية بحقول الاختيار (قارئ الشاشة)
   const reciterSelectId = useId();
@@ -159,6 +294,38 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           </button>
         </div>
 
+        {/* محتوى إضافي: ترجمة / تفسير / كلمة بكلمة */}
+        <div
+          role="group"
+          aria-label="عرض المحتوى الإضافي للآيات"
+          className="flex items-center gap-1 p-1 bg-stone-200/60 rounded-lg"
+        >
+          <ToolbarToggle
+            active={showTranslation}
+            label="الترجمة"
+            title="إظهار ترجمة معاني الآيات بالإنجليزية"
+            onClick={onToggleTranslation}
+          >
+            <Languages className="w-3.5 h-3.5" />
+          </ToolbarToggle>
+          <ToolbarToggle
+            active={showTafsir}
+            label="التفسير"
+            title="إظهار التفسير الميسر لكل آية"
+            onClick={onToggleTafsir}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+          </ToolbarToggle>
+          <ToolbarToggle
+            active={showWordByWord}
+            label="كلمة بكلمة"
+            title="إظهار معنى كل كلمة على حدة"
+            onClick={onToggleWordByWord}
+          >
+            <Grid3X3 className="w-3.5 h-3.5" />
+          </ToolbarToggle>
+        </div>
+
         {/* Reciter Selector & Font Selector & Size Adjuster */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Reciter Selector */}
@@ -233,6 +400,15 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
         </div>
       </div>
 
+      {contentNotice && (
+        <div
+          role="status"
+          className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 font-sans"
+        >
+          {contentNotice}
+        </div>
+      )}
+
       {/* Bismillah Header (if applicable) */}
       {showBismillah && (
         <div
@@ -267,6 +443,12 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
               playingAyah?.sura === ayah.sura &&
               playingAyah?.aya === ayah.aya;
             const isBookmarked = bookmarkedAyahs.has(`${ayah.sura}:${ayah.aya}`);
+            const tafsirText = tafsirByAyah?.get(ayah.aya);
+            const previousTafsirText =
+              tafsirByAyah && ayah.aya > 1 ? tafsirByAyah.get(ayah.aya - 1) : undefined;
+            const tafsirIsContinuation = Boolean(
+              tafsirText && previousTafsirText && tafsirText === previousTafsirText
+            );
 
             return (
               <VerseCard
@@ -279,6 +461,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                 isBookmarked={isBookmarked}
                 onPlayAudio={onPlayAyah}
                 onToggleBookmark={onToggleBookmark}
+                translationText={translationByAyah?.get(ayah.aya)}
+                tafsirText={tafsirText}
+                tafsirIsContinuation={tafsirIsContinuation}
+                wordEntries={wordsByAyah?.get(ayah.aya)}
               />
             );
           })}
