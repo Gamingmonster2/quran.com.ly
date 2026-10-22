@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'KFGQPC Uthman Taha Naskh';
+  src: url('/assets/fonts/UthmanTahaNaskh.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'KFGQPC Uthman Taha Naskh';
+  src: url('/assets/fonts/UthmanTahaNaskh-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'KFGQPC Hafs';
+  src: url('/assets/fonts/KFGQPC-Hafs-v18.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --font-quran: 'KFGQPC Uthman Taha Naskh', 'KFGQPC Hafs', 'Amiri Quran', serif;
+    --font-amiri: 'Amiri', serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+.font-quran {
+  font-family: var(--font-quran);
+  font-feature-settings: "cv01" on, "cv02" on;
+}
+
+.font-uthman-taha {
+  font-family: 'KFGQPC Uthman Taha Naskh', 'KFGQPC Hafs', serif;
+}
+
+.font-hafs-v18 {
+  font-family: 'KFGQPC Hafs', 'KFGQPC Uthman Taha Naskh', serif;
+}
+
+.font-amiri-quran {
+  font-family: 'Amiri Quran', 'Amiri', serif;
+}
+
+.font-amiri {
+  font-family: var(--font-amiri);
+}
+
+/* Custom scrollbars for clean reading experience */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 113, 108, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 113, 108, 0.45);
+}
