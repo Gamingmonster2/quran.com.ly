@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 /**
  * ==========================================================================
  *  تصيير مسبق ثابت (Prerendering) — النقطة 15
@@ -314,6 +314,8 @@ const FALLBACK_SCRIPT = `
 function stripPrerenderArtifacts(html) {
   let next = html.replace(/^\uFEFF?<!-- prerendered -->\r?\n/, '');
   next = next.replace(/\s*<style data-prerender-style>[\s\S]*?<\/style>/gi, '');
+  next = next.replace(/\s*<link[^>]*data-prerender-style[^>]*>/gi, '');
+  next = next.replace(/\s*<script[^>]*data-prerender-script[^>]*>\s*<\/script>/gi, '');
   next = next.replace(/\s*<script data-prerender-script>[\s\S]*?<\/script>/gi, '');
   next = next.replace(/\s*<script type="application\/ld\+json" id="page-structured-data">[\s\S]*?<\/script>/gi, '');
   // إعادة حاوية التطبيق فارغة كما أنشأها Vite
@@ -376,9 +378,10 @@ function setHtmlLang(html, lang = 'ar') {
   });
 }
 
-function injectStructuredData(html, data) {
-  // JSON منسّق بمسافات حتى تكون الحقول بصيغة `"@type": "Chapter"` المقروءة.
-  const json = JSON.stringify(data, null, 2);
+function injectStructuredData(html, data, compact = false) {
+  // JSON منسّق بمسافات حتى تكون الحقول بصيغة `"@type": "Chapter"` المقروءة
+  // (يُصغَّر في صفحات الآيات لتقليل الحجم).
+  const json = JSON.stringify(data, null, compact ? 0 : 2);
   const script = `    <script type="application/ld+json" id="page-structured-data">\n${json}\n    </script>`;
   return html.replace('</head>', `${script}\n  </head>`);
 }
@@ -386,15 +389,21 @@ function injectStructuredData(html, data) {
 function injectFallbackStyle(html) {
   return html.replace(
     '</head>',
-    `    <style data-prerender-style>${FALLBACK_CSS}    </style>\n  </head>`
+    `    <link rel="stylesheet" href="/prerender.css" data-prerender-style />\n  </head>`
   );
 }
 
 function injectFallbackScript(html) {
   return html.replace(
     '</body>',
-    `    <script data-prerender-script>${FALLBACK_SCRIPT}    </script>\n  </body>`
+    `    <script src="/prerender.js" data-prerender-script defer></script>\n  </body>`
   );
+}
+
+/** يكتب أصول معاينة المحتوى الثابت مرة واحدة بدل تكرارها في آلاف الصفحات. */
+function writeFallbackAssets() {
+  fs.writeFileSync(path.join(DIST, 'prerender.css'), FALLBACK_CSS, 'utf-8');
+  fs.writeFileSync(path.join(DIST, 'prerender.js'), FALLBACK_SCRIPT, 'utf-8');
 }
 
 /** يضع المحتوى الثابت داخل حاوية التطبيق ويضيف وسم data-prerender. */
@@ -413,7 +422,16 @@ function injectRootContent(html, innerHtml, prerenderLabel) {
 
 /** يبني صفحة نهائية من قالب SPA + بيانات الـ head + المحتوى الثابت. */
 function buildPage(templateHtml, options) {
-  const { title, description, canonical, jsonLd, rootInnerHtml, prerenderLabel, lang = 'ar' } = options;
+  const {
+    title,
+    description,
+    canonical,
+    jsonLd,
+    rootInnerHtml,
+    prerenderLabel,
+    lang = 'ar',
+    compactJsonLd = false,
+  } = options;
   let html = templateHtml;
   html = setHtmlLang(html, lang);
   html = replaceTitle(html, title);
@@ -424,7 +442,7 @@ function buildPage(templateHtml, options) {
   html = setMeta(html, 'property', 'og:url', canonical);
   html = setMeta(html, 'name', 'twitter:title', title);
   html = setMeta(html, 'name', 'twitter:description', description);
-  html = injectStructuredData(html, jsonLd);
+  html = injectStructuredData(html, jsonLd, compactJsonLd);
   html = injectFallbackStyle(html);
   html = injectRootContent(html, rootInnerHtml, prerenderLabel);
   html = injectFallbackScript(html);
@@ -604,6 +622,133 @@ function renderSurahFallbackHtml(surah, surahs) {
           <p class="prerender-note">نسخة نصية ثابتة للقراءة والأرشفة ومحركات البحث — افتح الموقع في متصفح حديث للاستماع والتلاوة والبحث.</p>${bismillahHtml}
           <div class="prerender-verses">
 ${versesHtml}
+          </div>
+${renderNavLinks(links)}
+        </div>
+      </div>`;
+}
+
+/** يحمّل الترجمات الإنجليزية لجميع السور (للصفحات الإنجليزية وصفحات الآيات). */
+function loadEnglishTranslations(surahs) {
+  const translations = new Map();
+  for (const surahMeta of surahs) {
+    const translationFile = path.join(
+      DATA_DIR,
+      'translations',
+      'en-sahih-international',
+      `${surahMeta.id}.json`
+    );
+    const translation = readJsonFile(translationFile);
+    if (!translation || !Array.isArray(translation.ayahs)) {
+      throw new Error(`الترجمة الإنجليزية للسورة ${surahMeta.id} غير متاحة: ${translationFile}`);
+    }
+    translations.set(surahMeta.id, translation);
+  }
+  return translations;
+}
+
+function buildAyahStructuredData(surah, verse, canonical, description) {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Chapter',
+        '@id': `${SITE}/surah/${surah.id}#chapter`,
+        name: `سورة ${surah.name}`,
+        alternateName: [surah.transliteration],
+        position: surah.id,
+        inLanguage: 'ar',
+        url: surahCanonical(surah),
+      },
+      {
+        '@type': 'Quotation',
+        '@id': `${canonical}#ayah`,
+        text: verse.text,
+        inLanguage: 'ar',
+        position: verse.aya,
+        isPartOf: { '@id': `${SITE}/surah/${surah.id}#chapter` },
+        url: canonical,
+        description,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'القرآن الكريم', item: `${SITE}/` },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: `سورة ${surah.name}`,
+            item: surahCanonical(surah),
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: `الآية ${toArabicDigits(verse.aya)}`,
+            item: canonical,
+          },
+        ],
+      },
+    ],
+  };
+}
+
+/** محتوى ثابت لصفحة آية واحدة: النص العثماني + الترجمة + تنقل بين الآيات. */
+function renderAyahFallbackHtml(surah, surahFull, verse, translationText, surahs) {
+  const totalVerses = surahFull.verses.length;
+  const previousVerse = verse.aya > 1 ? verse.aya - 1 : null;
+  const nextVerse = verse.aya < totalVerses ? verse.aya + 1 : null;
+  const showBismillah = surah.id !== 9 && surah.id !== 1 && verse.aya === 1;
+
+  const verseLinks = [
+    ...(previousVerse
+      ? [
+          {
+            href: `/surah/${surah.id}/${previousVerse}`,
+            label: `الآية السابقة (${toArabicDigits(previousVerse)})`,
+          },
+        ]
+      : []),
+    ...(nextVerse
+      ? [
+          {
+            href: `/surah/${surah.id}/${nextVerse}`,
+            label: `الآية التالية (${toArabicDigits(nextVerse)})`,
+          },
+        ]
+      : []),
+  ];
+
+  const links = [
+    { href: `/surah/${surah.id}`, label: `سورة ${surah.name} كاملة` },
+    ...verseLinks,
+    { href: '/', label: 'القرآن الكريم — الصفحة الرئيسية' },
+    { href: '/en/surah/' + surah.id + '/' + verse.aya, label: 'English' },
+  ];
+
+  return `      <div class="prerender-fallback" dir="rtl" lang="ar">
+        <div class="prerender-inner">
+          <header>
+            <p class="prerender-kicker">سورة ${escapeHtml(surah.name)} · ${escapeHtml(
+    surah.transliteration
+  )} · الآية ${toArabicDigits(verse.aya)} من ${toArabicDigits(totalVerses)}</p>
+            <h1>الآية ${toArabicDigits(verse.aya)} من سورة ${escapeHtml(surah.name)}</h1>
+          </header>${
+            showBismillah
+              ? `
+          <p class="prerender-bismillah" lang="ar" dir="rtl">بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</p>`
+              : ''
+          }
+          <div class="prerender-verses">
+            <article class="prerender-ayah" id="ayah-${surah.id}-${verse.aya}">
+              <p class="prerender-ayah-text" lang="ar" dir="rtl">${escapeHtml(
+                verse.text
+              )}<span class="prerender-ayah-number" aria-label="الآية ${toArabicDigits(
+    verse.aya
+  )}">${toArabicDigits(verse.aya)}</span></p>
+              <p class="prerender-ayah-translation" lang="en" dir="ltr">${escapeHtml(
+                translationText ?? ''
+              )}</p>
+            </article>
           </div>
 ${renderNavLinks(links)}
         </div>
@@ -1218,6 +1363,8 @@ function main() {
   }
 
   const templateHtml = stripPrerenderArtifacts(fs.readFileSync(TEMPLATE_FILE, 'utf-8'));
+  const translationsById = loadEnglishTranslations(surahs);
+  writeFallbackAssets();
 
   // 2) تجهيز مجلد صفحات السور (تنظيف أي ناتج سابق)
   fs.rmSync(SURAH_DIR, { recursive: true, force: true });
@@ -1244,6 +1391,48 @@ function main() {
       prerenderLabel: 'surah',
     });
     writeFile(path.join(SURAH_DIR, `${surahMeta.id}.html`), html);
+  }
+
+  // 3.5) صفحة ثابتة لكل آية (6236 صفحة) لتحسين الأرشفة العميقة والبحث
+  let ayahPageCount = 0;
+  for (const surahMeta of surahs) {
+    const surah = surahsById.get(surahMeta.id);
+    const translation = translationsById.get(surahMeta.id);
+    const translationByAya = new Map(
+      (translation?.ayahs ?? []).map((ayah) => [ayah.aya, ayah.text])
+    );
+    const surahAyahDir = path.join(SURAH_DIR, String(surahMeta.id));
+    fs.mkdirSync(surahAyahDir, { recursive: true });
+
+    for (const verse of surah.verses) {
+      const canonical = `${SITE}/surah/${surahMeta.id}/${verse.aya}`;
+      const ayahNumber = toArabicDigits(verse.aya);
+      const snippet = verse.text.length > 90 ? `${verse.text.slice(0, 90)}…` : verse.text;
+      const title = `سورة ${surahMeta.name} — الآية ${ayahNumber} | القرآن الكريم بالرسم العثماني`;
+      const description = `${snippet} — الآية ${ayahNumber} من سورة ${surahMeta.name} بالرسم العثماني، مع الترجمة الإنجليزية والتلاوة آية بآية على quran.com.ly.`;
+      let html = buildPage(templateHtml, {
+        title,
+        description,
+        canonical,
+        jsonLd: buildAyahStructuredData(surahMeta, verse, canonical, description),
+        rootInnerHtml: renderAyahFallbackHtml(
+          surahMeta,
+          surah,
+          verse,
+          translationByAya.get(verse.aya),
+          surahs
+        ),
+        prerenderLabel: 'ayah',
+        compactJsonLd: true,
+      });
+      html = injectLanguageAlternates(
+        html,
+        canonical,
+        `${SITE}/en/surah/${surahMeta.id}/${verse.aya}`
+      );
+      writeFile(path.join(surahAyahDir, `${verse.aya}.html`), html);
+      ayahPageCount += 1;
+    }
   }
 
   // 4) نسخة الرئيسية داخل dist/index.html (نفس سورة الفاتحة)
@@ -1286,21 +1475,6 @@ function main() {
   const EN_ROOT = path.join(DIST, 'en');
   fs.rmSync(EN_ROOT, { recursive: true, force: true });
   fs.mkdirSync(path.join(EN_ROOT, 'surah'), { recursive: true });
-
-  const translationsById = new Map();
-  for (const surahMeta of surahs) {
-    const translationFile = path.join(
-      DATA_DIR,
-      'translations',
-      'en-sahih-international',
-      `${surahMeta.id}.json`
-    );
-    const translation = readJsonFile(translationFile);
-    if (!translation || !Array.isArray(translation.ayahs)) {
-      throw new Error(`الترجمة الإنجليزية للسورة ${surahMeta.id} غير متاحة: ${translationFile}`);
-    }
-    translationsById.set(surahMeta.id, translation);
-  }
 
   const arUrlFor = (id) => (id === 1 ? `${SITE}/` : `${SITE}/surah/${id}`);
   const enUrlFor = (id) => (id === 1 ? `${SITE}/en` : `${SITE}/en/surah/${id}`);
@@ -1371,14 +1545,14 @@ function main() {
   // 5.6) إضافة روابط hreflang لكل الصفحات العربية المولّدة + الرئيسية
   for (const surahMeta of surahs) {
     const filePath = path.join(SURAH_DIR, `${surahMeta.id}.html`);
-    const html = fs.readFileSync(filePath, 'utf-8');
+    let html = fs.readFileSync(filePath, 'utf-8');
     if (!html.includes('hreflang="en"')) {
-      fs.writeFileSync(
-        filePath,
-        injectLanguageAlternates(html, arUrlFor(surahMeta.id), enUrlFor(surahMeta.id)),
-        'utf-8'
-      );
+      html = injectLanguageAlternates(html, arUrlFor(surahMeta.id), enUrlFor(surahMeta.id));
+      fs.writeFileSync(filePath, html, 'utf-8');
     }
+    // نسخة داخل مجلد الآيات: تضمن أن /surah/2 يُخدم صفحة السورة الكاملة
+    // سواء اختار Cloudflare Pages الملف 2.html أو مجلد 2/ (الذي يحتوي صفحات الآيات).
+    fs.writeFileSync(path.join(SURAH_DIR, String(surahMeta.id), 'index.html'), html, 'utf-8');
   }
   if (PRERENDER_HOME) {
     const html = fs.readFileSync(TEMPLATE_FILE, 'utf-8');
@@ -1492,6 +1666,35 @@ function main() {
           .includes('hreflang="ar"'),
     },
     {
+      label: 'صفحات الآيات: 6236 ملفًا (عدد آيات مطابق لكل سورة)',
+      ok: (() => {
+        let total = 0;
+        for (const surahMeta of surahs) {
+          const dir = path.join(SURAH_DIR, String(surahMeta.id));
+          if (!fs.existsSync(dir)) return false;
+          const files = fs
+            .readdirSync(dir)
+            .filter((name) => name.endsWith('.html') && name !== 'index.html');
+          if (files.length !== surahMeta.total_verses) return false;
+          total += files.length;
+        }
+        return total === 6236;
+      })(),
+    },
+    {
+      label: 'صفحة آية الكرسي: عنوان + كانونيكال + JSON-LD + hreflang',
+      ok: (() => {
+        const html = fs.readFileSync(path.join(SURAH_DIR, '2', '255.html'), 'utf-8');
+        return (
+          html.includes('<title>سورة البقرة — الآية ٢٥٥') &&
+          html.includes('rel="canonical" href="https://quran.com.ly/surah/2/255"') &&
+          html.includes('"@type":"Quotation"') &&
+          html.includes('id="ayah-2-255"') &&
+          html.includes('hreflang="en"')
+        );
+      })(),
+    },
+    {
       label: 'كل صفحة تحتوي وسم prerendered وستايل المحتوى الثابت',
       ok: fs
         .readFileSync(path.join(SURAH_DIR, '114.html'), 'utf-8')
@@ -1521,6 +1724,7 @@ function main() {
       .filter((entry) => entry.filePath.startsWith(SURAH_DIR))
       .reduce((sum, entry) => sum + entry.bytes, 0)
   )})`);
+  console.log(`  - صفحات الآيات: ${ayahPageCount} صفحة في dist/surah/{surahId}/`);
   console.log(
     `  - الصفحات الثابتة: ${STATIC_PAGES.map((page) => page.file).join('، ')}`
   );
