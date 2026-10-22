@@ -367,6 +367,15 @@ function setCanonical(html, href) {
   return html.replace(match[0], updated);
 }
 
+function setHtmlLang(html, lang = 'ar') {
+  return html.replace(/<html\b([^>]*)>/i, (_match, attrs) => {
+    const next = /\blang="[^"]*"/i.test(attrs)
+      ? attrs.replace(/\blang="[^"]*"/i, `lang="${lang}"`)
+      : `${attrs} lang="${lang}"`;
+    return `<html${next}>`;
+  });
+}
+
 function injectStructuredData(html, data) {
   // JSON منسّق بمسافات حتى تكون الحقول بصيغة `"@type": "Chapter"` المقروءة.
   const json = JSON.stringify(data, null, 2);
@@ -404,8 +413,9 @@ function injectRootContent(html, innerHtml, prerenderLabel) {
 
 /** يبني صفحة نهائية من قالب SPA + بيانات الـ head + المحتوى الثابت. */
 function buildPage(templateHtml, options) {
-  const { title, description, canonical, jsonLd, rootInnerHtml, prerenderLabel } = options;
+  const { title, description, canonical, jsonLd, rootInnerHtml, prerenderLabel, lang = 'ar' } = options;
   let html = templateHtml;
+  html = setHtmlLang(html, lang);
   html = replaceTitle(html, title);
   html = setMeta(html, 'name', 'description', description);
   html = setCanonical(html, canonical);
@@ -1311,6 +1321,7 @@ function main() {
         surahs
       ),
       prerenderLabel: 'surah-en',
+      lang: 'en',
     });
     html = injectLanguageAlternates(html, arUrlFor(surahMeta.id), canonical);
     writeFile(path.join(EN_ROOT, 'surah', `${surahMeta.id}.html`), html);
@@ -1331,6 +1342,7 @@ function main() {
         surahs
       ),
       prerenderLabel: 'surah-en',
+      lang: 'en',
     });
     html = injectLanguageAlternates(html, `${SITE}/`, `${SITE}/en`);
     writeFile(path.join(EN_ROOT, 'index.html'), html);
@@ -1350,6 +1362,7 @@ function main() {
       }),
       rootInnerHtml: renderStaticFallbackHtmlEn(page),
       prerenderLabel: `${page.slug}-en`,
+      lang: 'en',
     });
     html = injectLanguageAlternates(html, `${SITE}/${page.slug}`, canonical);
     writeFile(path.join(EN_ROOT, page.file), html);
