@@ -7,13 +7,13 @@
  *   /search               → البحث في الآيات
  *   /bookmarks            → العلامات المحفوظة
  *   /data                 → مستودع البيانات
- *   /about | /sources | /contact → صفحات تعريفية
+ *   /about | /sources | /contact | /api → صفحات تعريفية
  */
 
 export const SITE_URL = 'https://quran.com.ly';
 export const TOTAL_SURAHS = 114;
 
-export type StaticRouteName = 'about' | 'sources' | 'contact';
+export type StaticRouteName = 'about' | 'sources' | 'contact' | 'api';
 
 export type Route =
   | { name: 'surah'; surahId: number; ayahId?: number }
@@ -23,6 +23,7 @@ export type Route =
   | { name: 'about' }
   | { name: 'sources' }
   | { name: 'contact' }
+  | { name: 'api' }
   | { name: 'notFound' };
 
 export type ViewRouteName = 'surah' | 'search' | 'bookmarks' | 'data';
@@ -59,6 +60,8 @@ export function parseLocation(pathname: string): Route {
       return { name: 'sources' };
     case '/contact':
       return { name: 'contact' };
+    case '/api':
+      return { name: 'api' };
     default:
       return { name: 'notFound' };
   }
@@ -85,6 +88,8 @@ export function routeToPath(route: Route): string {
       return '/sources';
     case 'contact':
       return '/contact';
+    case 'api':
+      return '/api';
     case 'notFound':
       return '/404';
   }
@@ -113,5 +118,10 @@ export function routeToView(route: Route): ViewRouteName | null {
 export function isStaticPageRoute(
   route: Route
 ): route is { name: StaticRouteName } {
-  return route.name === 'about' || route.name === 'sources' || route.name === 'contact';
+  return (
+    route.name === 'about' ||
+    route.name === 'sources' ||
+    route.name === 'contact' ||
+    route.name === 'api'
+  );
 }

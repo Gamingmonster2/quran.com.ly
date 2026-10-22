@@ -12,6 +12,7 @@ import { useReadingProgress } from './hooks/useReadingProgress.ts';
 import AboutPage from './pages/AboutPage.tsx';
 import SourcesPage from './pages/SourcesPage.tsx';
 import ContactPage from './pages/ContactPage.tsx';
+import ApiPage from './pages/ApiPage.tsx';
 import {
   Route,
   isStaticPageRoute,
@@ -525,6 +526,14 @@ export default function App() {
       return;
     }
 
+    if (route.name === 'api') {
+      const title = 'واجهة البيانات (Content API) | quran.com.ly';
+      const description =
+        'بيانات القرآن الكريم كاملة (النص العثماني، الترجمة، التفسير، كلمة بكلمة) متاحة كملفات JSON ثابتة مع CORS مفتوح وتوثيق كامل على quran.com.ly.';
+      applyPageSeo({ title, description, route, jsonLd: buildWebPageJsonLd(title, description, route) });
+      return;
+    }
+
     applyPageSeo({
       title: 'الصفحة غير موجودة | quran.com.ly',
       description: 'الصفحة التي تبحث عنها غير موجودة. عد إلى فهرس السور لاستكشاف القرآن الكريم.',
@@ -758,6 +767,7 @@ export default function App() {
               {route.name === 'about' && <AboutPage />}
               {route.name === 'sources' && <SourcesPage />}
               {route.name === 'contact' && <ContactPage />}
+              {route.name === 'api' && <ApiPage />}
             </div>
           </>
         ) : isLoading ? (
@@ -942,6 +952,13 @@ export default function App() {
             className="hover:text-emerald-900 transition-colors"
           >
             تواصل معنا
+          </button>
+          <span aria-hidden="true">·</span>
+          <button
+            onClick={() => navigate({ name: 'api' })}
+            className="hover:text-emerald-900 transition-colors"
+          >
+            واجهة البيانات (API)
           </button>
           <span aria-hidden="true">·</span>
           <button

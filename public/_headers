@@ -1,0 +1,32 @@
+# رؤوس HTTP لـ Cloudflare Pages
+# تسمح للمطوّرين باستخدام بيانات القرآن كواجهة برمجية ثابتة (Content API)
+# من أي نطاق عبر CORS، مع كاش مناسب لكل نوع من الملفات.
+
+/assets/data/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, HEAD, OPTIONS
+  Cache-Control: public, max-age=86400
+  X-Content-Type-Options: nosniff
+
+/fonts/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/fonts/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/og-image.png
+  Cache-Control: public, max-age=604800
+
+/sitemap.xml
+  Cache-Control: public, max-age=3600
+
+/sitemaps/*
+  Cache-Control: public, max-age=3600
+
+/sw.js
+  Cache-Control: no-cache
