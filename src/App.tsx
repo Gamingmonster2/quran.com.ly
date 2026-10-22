@@ -7,6 +7,8 @@ import { SearchView } from './components/SearchView.tsx';
 import { BookmarksView } from './components/BookmarksView.tsx';
 import { DataInspectorModal } from './components/DataInspectorModal.tsx';
 import { AudioPlayerBar } from './components/AudioPlayerBar.tsx';
+import { CommandPalette, PaletteAction } from './components/CommandPalette.tsx';
+import { useReadingProgress } from './hooks/useReadingProgress.ts';
 import AboutPage from './pages/AboutPage.tsx';
 import SourcesPage from './pages/SourcesPage.tsx';
 import ContactPage from './pages/ContactPage.tsx';
@@ -132,6 +134,10 @@ export default function App() {
   });
 
   const [isDataModalOpen, setIsDataModalOpen] = useState<boolean>(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState<boolean>(false);
+
+  // تقدم القراءة: آخر موضع وصل إليه المستخدم (محفوظ في المتصفح)
+  const { progress: readingProgress, saveProgress } = useReadingProgress();
 
   /**
    * ينقل المستخدم إلى مسار جديد ويحدّث سجل المتصفح (History API).
@@ -531,9 +537,9 @@ export default function App() {
   useEffect(() => {
     if (route.name !== 'surah' || !route.ayahId || isLoading) return;
     const timer = window.setTimeout(() => {
-      const element = document.getElementById(
-        `ayah-${route.surahId}-${route.ayahId}`
-      );
+      const element =
+        document.getElementById(`ayah-${route.surahId}-${route.ayahId}`) ??
+        document.getElementById(`continuous-ayah-${route.surahId}-${route.ayahId}`);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
@@ -567,8 +573,36 @@ export default function App() {
 
   const handleOpenAyah = (suraId: number, ayaNum: number) => {
     setMobilePane('reader');
+    saveProgress(suraId, ayaNum);
     navigate({ name: 'surah', surahId: suraId, ayahId: ayaNum });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  /** تنفيذ أوامر شريط الأوامر (Ctrl/Cmd+K) */
+  const handlePaletteAction = (action: PaletteAction) => {
+    switch (action) {
+      case 'search':
+        navigate({ name: 'search' });
+        break;
+      case 'bookmarks':
+        navigate({ name: 'bookmarks' });
+        break;
+      case 'data':
+        navigate({ name: 'data' });
+        break;
+      case 'about':
+        navigate({ name: 'about' });
+        break;
+      case 'sources':
+        navigate({ name: 'sources' });
+        break;
+      case 'contact':
+        navigate({ name: 'contact' });
+        break;
+      case 'toggle-theme':
+        setTheme(theme === 'dark' ? 'beige' : 'dark');
+        break;
+    }
   };
 
   const handlePlayAyah = (ayah: Ayah) => {
@@ -584,6 +618,7 @@ export default function App() {
       setIsPlaying(false);
     } else {
       setPlayingAyah(ayah);
+      saveProgress(ayah.sura, ayah.aya);
       loadAyahAudio(ayah);
       setIsPlaying(true);
     }
@@ -688,6 +723,20 @@ export default function App() {
     return new Set(bookmarks.map((b) => `${b.sura}:${b.aya}`));
   }, [bookmarks]);
 
+  // موضع الاستئناف: شريط «تابع القراءة» يظهر إذا كان آخر موضع محفوظ مختلفًا عن الصفحة الحالية
+  const resumeTarget = useMemo(() => {
+    if (!readingProgress || route.name !== 'surah') return null;
+    const alreadyThere =
+      readingProgress.sura === route.surahId &&
+      (route.ayahId ?? 1) === readingProgress.aya;
+    if (alreadyThere) return null;
+    return {
+      sura: readingProgress.sura,
+      aya: readingProgress.aya,
+      surahName: surahs.find((surah) => surah.id === readingProgress.sura)?.name,
+    };
+  }, [readingProgress, route, surahs]);
+
   return (
     <div className="h-dvh min-h-0 flex flex-col overflow-hidden bg-[#FBF9F5] text-stone-900 font-sans selection:bg-emerald-100 selection:text-emerald-900">
       <Header
@@ -697,6 +746,7 @@ export default function App() {
         theme={theme}
         onSelectTheme={setTheme}
         onNavigateHome={() => navigate({ name: 'surah', surahId: 1 })}
+        onOpenCommandPalette={() => setIsPaletteOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -783,6 +833,13 @@ export default function App() {
                     showWordByWord={showWordByWord}
                     onToggleWordByWord={() => setShowWordByWord((value) => !value)}
                     onBackToSurahList={() => setMobilePane('list')}
+                    onAyahVisible={saveProgress}
+                    resumeTarget={resumeTarget}
+                    onResume={() => {
+                      if (resumeTarget) {
+                        handleOpenAyah(resumeTarget.sura, resumeTarget.aya);
+                      }
+                    }}
                   />
                 </div>
               </div>
@@ -942,6 +999,16 @@ export default function App() {
           onClose={() => setIsDataModalOpen(false)}
         />
       )}
+
+      {/* شريط الأوامر (Ctrl/Cmd + K) */}
+      <CommandPalette
+        open={isPaletteOpen}
+        onRequestOpen={() => setIsPaletteOpen(true)}
+        onClose={() => setIsPaletteOpen(false)}
+        surahs={surahs}
+        onSelectSurah={handleSelectSurah}
+        onAction={handlePaletteAction}
+      />
     </div>
   );
 }

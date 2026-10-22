@@ -1,6 +1,10 @@
 import React from 'react';
-import { Download, Moon, Sun } from 'lucide-react';
+import { Download, Moon, Search, Sun } from 'lucide-react';
 import { ThemeMode, ViewMode } from '../types/quran.ts';
+
+/** حلقة تركيز موحّدة وواضحة لمستخدمي لوحة المفاتيح */
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500';
 
 interface HeaderProps {
   currentView: ViewMode | null;
@@ -9,6 +13,8 @@ interface HeaderProps {
   theme: ThemeMode;
   onSelectTheme: (theme: ThemeMode) => void;
   onNavigateHome: () => void;
+  /** يُمرَّر من App لفتح لوحة الأوامر (Ctrl/Cmd+K)؛ إن لم يُمرَّر لا يظهر الزر */
+  onOpenCommandPalette?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   theme,
   onSelectTheme,
   onNavigateHome,
+  onOpenCommandPalette,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-[#FBF9F5]/90 backdrop-blur-md border-b border-stone-200">
@@ -109,6 +116,24 @@ export const Header: React.FC<HeaderProps> = ({
               <span>بيج</span>
             </button>
           </div>
+
+          {/* فتح لوحة الأوامر والتنقل السريع (Ctrl/Cmd+K) — يظهر فقط إن مرّر App الدالة */}
+          {onOpenCommandPalette && (
+            <button
+              type="button"
+              onClick={onOpenCommandPalette}
+              aria-label="بحث سريع (Ctrl+K)"
+              aria-keyshortcuts="Control+K Meta+K"
+              title="بحث سريع (Ctrl+K)"
+              className={`inline-flex items-center gap-1.5 rounded-lg bg-stone-200/60 px-2 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-200 hover:text-stone-900 shrink-0 sm:px-2.5 ${FOCUS_RING}`}
+            >
+              <Search aria-hidden="true" className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">بحث سريع</span>
+              <kbd className="hidden items-center rounded border border-stone-300/70 bg-white/70 px-1 py-0.5 font-mono text-[9px] text-stone-500 lg:inline-flex">
+                Ctrl+K
+              </kbd>
+            </button>
+          )}
 
           <button
             onClick={onOpenDataModal}

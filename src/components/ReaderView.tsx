@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import {
   Play,
   Pause,
@@ -11,6 +11,7 @@ import {
   Languages,
   BookOpen,
   Grid3X3,
+  X,
 } from 'lucide-react';
 import {
   SurahWithVerses,
@@ -90,6 +91,15 @@ interface ReaderViewProps {
   onToggleWordByWord: () => void;
   /** العودة إلى فهرس السور (تُستخدم في الجوال) */
   onBackToSurahList?: () => void;
+  /**
+   * يُنادى عند تغيّر أول آية ظاهرة في القارئ أثناء التمرير،
+   * ويُستخدم عادةً لحفظ تقدم القراءة (useReadingProgress).
+   */
+  onAyahVisible?: (sura: number, aya: number) => void;
+  /** آخر موضع قراءة محفوظ يُعرض شريط استئنافه أعلى القارئ (إن وُجد). */
+  resumeTarget?: { sura: number; aya: number; surahName?: string } | null;
+  /** يُنادى عند الضغط على زر «متابعة» في شريط الاستئناف. */
+  onResume?: () => void;
 }
 
 export const ReaderView: React.FC<ReaderViewProps> = ({
@@ -117,6 +127,9 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   showWordByWord,
   onToggleWordByWord,
   onBackToSurahList,
+  onAyahVisible,
+  resumeTarget,
+  onResume,
 }) => {
   const isPlayingThisSurah = isPlaying && playingAyah?.sura === surah.id;
   const showBismillah = surah.id !== 9 && surah.id !== 1; // Surah 1 includes Bismillah as verse 1; Surah 9 doesn't have Bismillah
@@ -208,8 +221,180 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     }
   }, [playingAyah, isPlaying, surah.id, displayMode]);
 
+  // ------- تتبع أول آية ظاهرة أثناء التمرير (لحفظ تقدّم القراءة) -------
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  // آخر موضع أُبلغ عنه للوالد حتى لا نعيد النداء إلا عند تغيّر الآية فعلًا.
+  const lastReportedPositionRef = useRef<{ sura: number; aya: number } | null>(null);
+  const firstAyahNumber = surah.verses.length > 0 ? surah.verses[0].aya : 1;
+  const [visiblePosition, setVisiblePosition] = useState<{ sura: number; aya: number }>(
+    () => ({ sura: surah.id, aya: firstAyahNumber })
+  );
+
+  // نحتفظ بدالة الإبلاغ في مرجع حتى لا نعيد ربط مستمع التمرير عند كل Render
+  // (قد يمرّر App دالة جديدة الهوية في كل مرة).
+  const onAyahVisibleRef = useRef(onAyahVisible);
+  useEffect(() => {
+    onAyahVisibleRef.current = onAyahVisible;
+  }, [onAyahVisible]);
+
+  // عند تبديل السورة: أعد تمرير القارئ إلى الأعلى حتى لا يبدأ من منتصف السورة الجديدة
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (container) container.scrollTop = 0;
+    lastReportedPositionRef.current = null;
+    setVisiblePosition({
+      sura: surah.id,
+      aya: surah.verses.length > 0 ? surah.verses[0].aya : 1,
+    });
+  }, [surah.id]);
+
+  const shouldTrackVisibleAyah = Boolean(onAyahVisible || resumeTarget);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !shouldTrackVisibleAyah) return;
+
+    // نجمع بطاقات الآيات مرة واحدة لكل (سورة/وضع عرض) بدل الاستعلام في كل إطار.
+    // يدعم الوضعين: بطاقات `ayah-x-y` ووسوم الوضع المتصل `continuous-ayah-x-y`.
+    const cards = Array.from(
+      container.querySelectorAll<HTMLElement>(
+        '[id^="ayah-"], [id^="continuous-ayah-"]'
+      )
+    );
+    if (cards.length === 0) return;
+
+    const parseCardId = (element: HTMLElement): { sura: number; aya: number } | null => {
+      const match = /^(?:continuous-)?ayah-(\d+)-(\d+)$/.exec(element.id);
+      if (!match) return null;
+      return { sura: Number(match[1]), aya: Number(match[2]) };
+    };
+
+    lastReportedPositionRef.current = null;
+
+    let frameId = 0;
+    let reportNextFrame = false;
+
+    const measure = (report: boolean) => {
+      const containerRect = container.getBoundingClientRect();
+      // الحاوية مخفية (مثل فهرس السور في الجوال) — لا معنى للقياس.
+      if (containerRect.height < 1 || containerRect.width < 1) return;
+
+      // أول بطاقة يتجاوز أسفلها أعلى الحاوية = أول آية ظاهرة على الشاشة.
+      const topBoundary = containerRect.top + 8;
+      let next: { sura: number; aya: number } | null = null;
+      for (const card of cards) {
+        if (card.getBoundingClientRect().bottom > topBoundary) {
+          next = parseCardId(card);
+          break;
+        }
+      }
+      // إن كان التمرير بعد آخر آية (هامش أسفل الصفحة) نعتبر آخر آية هي الظاهرة.
+      if (!next) next = parseCardId(cards[cards.length - 1]);
+      if (!next) return;
+
+      const measured = next;
+      setVisiblePosition((previous) =>
+        previous.sura === measured.sura && previous.aya === measured.aya
+          ? previous
+          : measured
+      );
+
+      if (!report) return;
+      const lastReported = lastReportedPositionRef.current;
+      if (
+        lastReported &&
+        lastReported.sura === measured.sura &&
+        lastReported.aya === measured.aya
+      ) {
+        return;
+      }
+      lastReportedPositionRef.current = measured;
+      onAyahVisibleRef.current?.(measured.sura, measured.aya);
+    };
+
+    // إطار واحد لكل تمرير (rAF) حتى لا نعيد القياس والحساب لكل حدث بكسل.
+    const scheduleMeasure = (report: boolean) => {
+      reportNextFrame = reportNextFrame || report;
+      if (frameId) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        const shouldReport = reportNextFrame;
+        reportNextFrame = false;
+        measure(shouldReport);
+      });
+    };
+
+    const handleScroll = () => scheduleMeasure(true);
+    container.addEventListener('scroll', handleScroll, { passive: true });
+
+    // تغيّر حجم الحاوية (فتح القارئ في الجوال، ظهور شريط الصوت، تغيير حجم النافذة):
+    // نقيس الموضع من جديد دون تسجيل تقدّم جديد.
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => scheduleMeasure(false));
+      resizeObserver.observe(container);
+    }
+
+    // قياس أولي: نضبط الموضع الداخلي فقط دون استدعاء onAyahVisible،
+    // حتى لا يُسجَّل تقدّم جديد بمجرد فتح السورة قبل أن يمرّر المستخدم.
+    measure(false);
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      resizeObserver?.disconnect();
+      if (frameId) window.cancelAnimationFrame(frameId);
+    };
+  }, [surah.id, displayMode, shouldTrackVisibleAyah]);
+
+  // ------- شريط استئناف القراءة من آخر موضع محفوظ -------
+  const [resumeDismissed, setResumeDismissed] = useState(false);
+  const resumeTargetSura = resumeTarget?.sura ?? null;
+  const resumeTargetAya = resumeTarget?.aya ?? null;
+  useEffect(() => {
+    // عند اختفاء هدف الاستئناف (بعد المتابعة أو حفظ موضع القراءة) نعيد تفعيل الشريط.
+    if (resumeTargetSura === null || resumeTargetAya === null) {
+      setResumeDismissed(false);
+    }
+  }, [resumeTargetSura, resumeTargetAya]);
+
+  // الموضع الظاهر فعليًا؛ نتجاهل حالة قديمة تعود لسورة سابقة قبل تأثير التتبع.
+  const effectiveVisiblePosition =
+    visiblePosition.sura === surah.id
+      ? visiblePosition
+      : { sura: surah.id, aya: firstAyahNumber };
+
+  const isResumeTargetAlreadyVisible =
+    !!resumeTarget &&
+    effectiveVisiblePosition.sura === resumeTarget.sura &&
+    effectiveVisiblePosition.aya === resumeTarget.aya;
+
+  // إن كان هدف الاستئناف هو نفسه الآية قيد التلاوة الآن فلا معنى لعرض الشريط
+  // (يمنع ظهوره/اختفاءه المزعج أثناء التمرير التلقائي للآية قيد التشغيل).
+  const isResumeTargetPlaying =
+    !!resumeTarget &&
+    isPlaying &&
+    playingAyah?.sura === resumeTarget.sura &&
+    playingAyah?.aya === resumeTarget.aya;
+
+  const showResumeBar =
+    !!resumeTarget && !resumeDismissed && !isResumeTargetAlreadyVisible && !isResumeTargetPlaying;
+
+  const resumeSurahLabel = resumeTarget
+    ? resumeTarget.surahName
+      ? `سورة ${resumeTarget.surahName}`
+      : `سورة رقم ${toArabicDigits(resumeTarget.sura)}`
+    : '';
+
+  const handleResumeClick = () => {
+    setResumeDismissed(true);
+    onResume?.();
+  };
+
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
+    <div
+      ref={scrollContainerRef}
+      className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full"
+    >
       {/* شريط العودة إلى فهرس السور (يظهر في الجوال فقط) */}
       <div className="md:hidden mb-3 flex items-center justify-between gap-2">
         <button
@@ -225,6 +410,52 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           سورة {surah.name}
         </span>
       </div>
+
+      {/* شريط استئناف القراءة من آخر موضع محفوظ (يظهر فقط إن اختلف عن الموضع الحالي) */}
+      {showResumeBar && resumeTarget && (
+        <div
+          role="region"
+          aria-label="استئناف القراءة"
+          className="mb-3 sm:mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 shadow-xs font-sans"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <BookOpen aria-hidden="true" className="w-4 h-4 shrink-0 text-emerald-700" />
+            <p className="min-w-0 text-xs leading-relaxed text-stone-600">
+              <span className="text-stone-500">تابع القراءة من حيث توقفت: </span>
+              <span className="font-semibold text-stone-900">{resumeSurahLabel}</span>
+              <span aria-hidden="true" className="mx-1 text-stone-400">
+                —
+              </span>
+              <span className="text-stone-500">الآية </span>
+              <span className="font-semibold text-stone-900">
+                {toArabicDigits(resumeTarget.aya)}
+              </span>
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={handleResumeClick}
+              aria-label={`متابعة القراءة من ${resumeSurahLabel} عند الآية ${toArabicDigits(
+                resumeTarget.aya
+              )}`}
+              className={`inline-flex items-center gap-1 rounded-lg bg-stone-900 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-stone-800 ${FOCUS_RING}`}
+            >
+              <span>متابعة</span>
+              <ChevronLeft aria-hidden="true" className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setResumeDismissed(true)}
+              title="إغلاق شريط الاستئناف"
+              aria-label="إغلاق شريط الاستئناف"
+              className={`rounded-md p-1 text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800 ${FOCUS_RING}`}
+            >
+              <X aria-hidden="true" className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Surah Header Banner */}
       <div className="bg-white border border-stone-200/90 rounded-2xl p-4 sm:p-8 text-center shadow-xs mb-4 sm:mb-6 relative overflow-hidden">
