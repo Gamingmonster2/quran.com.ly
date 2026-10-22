@@ -777,32 +777,17 @@ const STATIC_PAGES = [
 // ---------------------------------------------------------------------------
 
 /**
- * يعيد كتابة dist/_redirects بحيث تسبق قواعد 200 الصريحة قاعدة الـ SPA
- * fallback (تبقى القاعدة الأخيرة في النهاية). 118 قاعدة صريحة كحد أقصى
- * (114 سورة + 4 صفحات).
+ * يضمن أن dist/_redirects يحتوي فقط قاعدة SPA fallback الأصلية.
+ *
+ * لماذا لا نضيف قواعد 200 صريحة من /surah/2 إلى /surah/2.html؟
+ * لأن Cloudflare Pages يطبّق «Pretty URLs» تلقائيًا: يخدم /surah/2 من
+ * /surah/2.html، ويحوّل أي طلب لـ .html إلى الرابط بدون لاحقة (308). إضافة
+ * قاعدة 200 نحو .html تُنشئ حلقة تحويل لا نهائية (308 → rule → 308 …)،
+ * لذلك نترك الصفحات المولّدة تُخدم بالسلوك الأصلي لـ Pages.
  */
-function rewriteRedirects(surahs, staticPages) {
+function keepSpaFallbackRedirects() {
   const redirectsPath = path.join(DIST, '_redirects');
-  const rules = [
-    ...surahs.map((surah) => ({
-      from: `/surah/${surah.id}`,
-      to: `/surah/${surah.id}.html`,
-    })),
-    ...staticPages.map((page) => ({
-      from: `/${page.slug}`,
-      to: `/${page.file}`,
-    })),
-  ];
 
-  if (rules.length > 118) {
-    throw new Error(`عدد قواعد _redirects الصريحة ${rules.length} يتجاوز الحد 118.`);
-  }
-
-  const fromWidth = Math.max(...rules.map((rule) => rule.from.length), 2) + 4;
-  const toWidth = Math.max(...rules.map((rule) => rule.to.length), '/index.html'.length) + 4;
-  const formatRule = (from, to) => `${from.padEnd(fromWidth)}${to.padEnd(toWidth)}200`;
-
-  // نحافظ على قاعدة fallback الأصلية إن وُجدت (وإلا نستخدم الصيغة الافتراضية).
   let fallbackFrom = '/*';
   let fallbackTo = '/index.html';
   if (fs.existsSync(redirectsPath)) {
@@ -814,12 +799,8 @@ function rewriteRedirects(surahs, staticPages) {
     }
   }
 
-  const lines = [
-    ...rules.map((rule) => formatRule(rule.from, rule.to)),
-    formatRule(fallbackFrom, fallbackTo),
-  ];
-  fs.writeFileSync(redirectsPath, `${lines.join('\n')}\n`, 'utf-8');
-  return { explicitRules: rules.length, filePath: redirectsPath };
+  fs.writeFileSync(redirectsPath, `${fallbackFrom}    ${fallbackTo}    200\n`, 'utf-8');
+  return { explicitRules: 0, filePath: redirectsPath };
 }
 
 // ---------------------------------------------------------------------------
@@ -925,8 +906,8 @@ function main() {
     writeFile(path.join(DIST, page.file), html);
   }
 
-  // 6) إعادة كتابة _redirects
-  const redirects = rewriteRedirects(surahs, STATIC_PAGES);
+  // 6) إبقاء قاعدة SPA fallback فقط (Cloudflare Pages يخدم .html بدون لاحقة)
+  const redirects = keepSpaFallbackRedirects();
 
   // 7) فحوصات سلامة سريعة على أهم مخرجات (تُفشل السكربت فورًا عند أي خلل)
   const checks = [
@@ -973,16 +954,17 @@ function main() {
       ok: STATIC_PAGES.every((page) => fs.existsSync(path.join(DIST, page.file))),
     },
     {
-      label: '_redirects يبدأ بـ /surah/1 وينتهي بقاعدة fallback',
+      label: '_redirects يحتوي قاعدة SPA fallback فقط',
       ok: (() => {
         const lines = fs
           .readFileSync(redirects.filePath, 'utf-8')
           .trimEnd()
-          .split('\n');
+          .split('\n')
+          .filter((line) => line.trim().length > 0);
         return (
-          lines.length === redirects.explicitRules + 1 &&
-          lines[0].startsWith('/surah/1 ') &&
-          /^\s*\/\*\s+\/index\.html\s+200\s*$/.test(lines[lines.length - 1])
+          redirects.explicitRules === 0 &&
+          lines.length === 1 &&
+          /^\s*\/\*\s+\/index\.html\s+200\s*$/.test(lines[0])
         );
       })(),
     },
@@ -1023,7 +1005,7 @@ function main() {
     `  - dist/index.html: ${homePrerendered ? 'نسخة الرئيسية المسبقة (سورة الفاتحة)' : 'لم تُعدّل'}`
   );
   console.log(
-    `  - dist/_redirects: ${redirects.explicitRules} قاعدة 200 صريحة + قاعدة /* /index.html 200 في النهاية`
+    `  - dist/_redirects: قاعدة SPA fallback فقط (الصفحات المولّدة تُخدم عبر Pretty URLs تلقائيًا)`
   );
   console.log(`  - عدد الملفات المولّدة: ${generated.length}`);
   console.log(
