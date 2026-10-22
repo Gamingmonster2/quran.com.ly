@@ -546,6 +546,12 @@ export default function App() {
             <span className="text-stone-500">تلاوات بعدة قرّاء · بحث فوري · بيانات JSON</span>
           </div>
         </div>
+
+        {/* إشارة بسيطة إلى المساعدة الأولية في جلب ملفات البيانات */}
+        <div className="max-w-7xl mx-auto mt-2 pt-2 border-t border-stone-200/70 text-center text-[10px] sm:text-[11px] leading-relaxed text-stone-400">
+          بدأ المشروع بمساعدة أدوات Google AI Studio في جلب بيانات القرآن بصيغة JSON، ثم أُكمل تطويره
+          وصيانته من صاحب المشروع.
+        </div>
       </footer>
 
       {/* Persistent Audio Player Bar */}
