@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { BookOpen, Check, Copy, Play, Share2, Sparkles, ArrowLeft } from 'lucide-react';
+import { BookOpen, Check, Copy, Play, Share2, ArrowLeft } from 'lucide-react';
 import type { Ayah, SurahMeta, SurahWithVerses } from '../types/quran.ts';
 import { toArabicDigits } from '../utils/quranHelpers.ts';
 import { getDailyVerse } from '../utils/dailyVerses.ts';
@@ -110,7 +110,6 @@ export const HomeHighlights: React.FC<HomeHighlightsProps> = ({
         <GeometricPattern className="pointer-events-none absolute -left-4 -top-4 h-28 w-28 text-emerald-900 opacity-[0.07]" />
         <div className="relative flex items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-900/10 px-2 py-0.5 text-[10px] font-bold text-emerald-900">
-            <Sparkles aria-hidden="true" className="h-3 w-3" />
             {t('daily.label')}
           </span>
           <span className="text-[10px] text-stone-400">
@@ -127,14 +126,17 @@ export const HomeHighlights: React.FC<HomeHighlightsProps> = ({
           className="relative mt-2 font-quran text-[15px] leading-[2.35] text-stone-900 md:text-base"
         >
           {dailyAyah.text}
+          <span
+            aria-label={t('daily.ayahNumber', { aya: toArabicDigits(daily.aya) })}
+            className="ms-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-emerald-900/30 bg-[#FAF7F0] px-1 align-middle font-sans text-[10px] font-bold text-emerald-900"
+          >
+            {toArabicDigits(daily.aya)}
+          </span>
         </p>
 
         <div className="relative mt-1.5 flex items-center justify-between gap-2">
           <span className="text-[10px] font-medium text-stone-500">
-            {t('daily.reference', {
-              sura: dailySurah.name,
-              aya: toArabicDigits(daily.aya),
-            })}
+            {t('daily.surah', { sura: dailySurah.name })}
           </span>
         </div>
 

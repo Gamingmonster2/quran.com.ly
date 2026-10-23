@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * ==========================================================================
  *  تصيير مسبق ثابت (Prerendering) — النقطة 15
@@ -813,7 +813,7 @@ const STATIC_PAGES = [
     meta: 'مصحف إلكتروني وقاعدة بيانات مفتوحة المصدر للقرآن الكريم',
     paragraphs: [
       'quran.com.ly مصحف إلكتروني وقاعدة بيانات مفتوحة المصدر للقرآن الكريم بالرسم العثماني برواية حفص عن عاصم، مع تلاوات صوتية بعدة قرّاء آية بآية، وبحث فوري في آيات القرآن الكريم، وفهرس للسور، وإمكانية تنزيل البيانات بصيغة JSON.',
-      'بدأ المشروع بمساعدة أدوات Google AI Studio في جلب بيانات القرآن بصيغة JSON، ثم أُكمل تطويره وصيانته من صاحب المشروع. الكود والبيانات متاحان للعموم ضمن مستودع المشروع على GitHub بترخيص MIT.',
+      'الكود والبيانات متاحان للعموم ضمن مستودع المشروع على GitHub بترخيص MIT، وهذا الموقع هو المظلة الرئيسية لمشاريع القرآن الكريم المرتبطة به.',
     ],
     sections: [],
     links: [
@@ -1125,7 +1125,7 @@ const EN_STATIC_PAGES = [
     meta: 'An open-source digital mushaf and dataset of the Holy Quran',
     paragraphs: [
       'quran.com.ly is an open-source digital mushaf and dataset of the Holy Quran in the Uthmani script (Hafs narration), featuring verse-by-verse audio from several reciters, instant Arabic search, surah index, English translation, Muyassar tafsir, word-by-word meanings, and JSON data downloads.',
-      'The project began with the help of Google AI Studio tools to fetch Quran data as JSON; all further development and maintenance is by the project owner. Code and data are public in the GitHub repository under the MIT license.',
+      'Code and data are public in the GitHub repository under the MIT license. This site is the main umbrella for its related Quran projects.',
     ],
     sections: [],
     links: [

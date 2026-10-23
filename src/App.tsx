@@ -62,6 +62,18 @@ const HOME_TITLE_EN =
 const HOME_DESCRIPTION_EN =
   'A complete digital mushaf and open-source dataset of the Holy Quran in Uthmani script on quran.com.ly: verse-by-verse audio from 15 reciters, instant diacritics-insensitive search over 6,236 ayahs, surah index, dark and beige reading modes, and JSON data downloads.';
 
+/** مشاريع مرتبطة — هذا الموقع هو المظلة الرئيسية لها */
+const PROJECT_SITES = [
+  'quranbook.org',
+  'quranvoice.org',
+  'qurancomplex.ly',
+  'quran.id.ly',
+  'quran.org.ly',
+  'quran.net.ly',
+  'koran.com.ly',
+  'kitab.ly',
+] as const;
+
 export default function App() {
   const [surahs, setSurahs] = useState<SurahMeta[]>([]);
   const [allVerses, setAllVerses] = useState<Ayah[]>([]);
@@ -1028,9 +1040,27 @@ export default function App() {
           </button>
         </nav>
 
-        {/* إشارة بسيطة إلى المساعدة الأولية في جلب ملفات البيانات */}
-        <div className="max-w-7xl mx-auto mt-1 sm:mt-2 text-center text-[9px] sm:text-[11px] leading-snug sm:leading-relaxed text-stone-400">
-          {t('footer.credit')}
+        {/* مشاريع مرتبطة — المظلة الرئيسية لمشاريع القرآن الكريم */}
+        <div className="max-w-7xl mx-auto mt-1 sm:mt-2 pt-1.5 sm:pt-2 border-t border-stone-200/70 text-center text-[9px] sm:text-[11px] text-stone-500">
+          <span className="font-semibold text-stone-600">{t('footer.projects')}</span>
+          <div className="mt-0.5 flex flex-wrap items-center justify-center gap-x-2.5 gap-y-0.5">
+            {PROJECT_SITES.map((domain) => (
+              <a
+                key={domain}
+                href={`https://${domain}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                dir="ltr"
+                title={domain}
+                className="font-mono text-[9px] text-stone-500 underline-offset-2 transition-colors hover:text-emerald-900 hover:underline sm:text-[11px]"
+              >
+                {domain}
+              </a>
+            ))}
+          </div>
+          <p className="mt-0.5 text-[8px] leading-snug text-stone-400 sm:text-[10px]">
+            {t('footer.umbrella')}
+          </p>
         </div>
       </footer>
 

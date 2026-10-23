@@ -1,4 +1,4 @@
-﻿import {
+import {
   BookOpen,
   Bookmark,
   CodeXml,
@@ -221,12 +221,11 @@ export default function AboutPage() {
             ))}
           </ol>
 
-          {/* إشارة واحدة بسيطة إلى المساعدة الأولية في جلب بيانات JSON */}
-          <div className="flex items-start gap-3 rounded-xl bg-[#FAF7F0] border border-stone-200/90 p-4">
-            <Sparkles className="w-4 h-4 text-emerald-800 shrink-0 mt-0.5" aria-hidden="true" />
+          {/* بيانات مفتوحة المصدر + موقع المظلة */}
+          <div className="rounded-xl bg-[#FAF7F0] border border-stone-200/90 p-4">
             <p className="text-sm leading-relaxed text-stone-700">
-              بدأ المشروع بمساعدة أدوات Google AI Studio في جلب بيانات القرآن الكريم بصيغة
-              JSON، ثم أُكمل تطويره وتخصيصه وصيانته بالكامل من صاحب المشروع.
+              الكود والبيانات متاحان للعموم ضمن مستودع المشروع على GitHub بترخيص MIT،
+              وهذا الموقع هو المظلة الرئيسية لمشاريع القرآن الكريم المرتبطة به.
             </p>
           </div>
         </section>
