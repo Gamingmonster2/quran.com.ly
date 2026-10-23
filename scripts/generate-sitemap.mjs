@@ -1,4 +1,4 @@
-/**
+﻿/**
  * توليد خرائط الموقع (Sitemaps) مقسّمة (Sharded):
  *   public/sitemap.xml            → فهرس الخرائط (Sitemap Index)
  *   public/sitemaps/pages.xml     → الصفحات الثابتة
@@ -59,6 +59,7 @@ let ayahsCount = 0;
 // 1) الصفحات الثابتة (عربي + إنجليزي)
 pagesCount = writeSitemap('pages.xml', [
   urlEntry('/', { changefreq: 'daily', priority: '1.0' }),
+  urlEntry('/surahs', { changefreq: 'weekly', priority: '0.9' }),
   urlEntry('/about', { changefreq: 'monthly', priority: '0.5' }),
   urlEntry('/sources', { changefreq: 'monthly', priority: '0.5' }),
   urlEntry('/contact', { changefreq: 'yearly', priority: '0.4' }),

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Ayah, SurahMeta, SurahWithVerses, Bookmark, ViewMode, ReadingDisplayMode, QuranFontChoice, ThemeMode } from './types/quran.ts';
 import { Header } from './components/Header.tsx';
@@ -6,6 +6,7 @@ import { SurahList } from './components/SurahList.tsx';
 import { ReaderView } from './components/ReaderView.tsx';
 import { HomeHighlights } from './components/HomeHighlights.tsx';
 import { DailyVerseStrip } from './components/DailyVerseStrip.tsx';
+import { SurahIndexPage } from './components/SurahIndexPage.tsx';
 import { SearchView } from './components/SearchView.tsx';
 import { BookmarksView } from './components/BookmarksView.tsx';
 import { DataInspectorModal } from './components/DataInspectorModal.tsx';
@@ -590,6 +591,15 @@ export default function App() {
       return;
     }
 
+    if (route.name === 'surahs') {
+      const title = isEn ? 'Surah Index — The Holy Quran | quran.com.ly' : 'فهرس سور القرآن الكريم — ١١٤ سورة | quran.com.ly';
+      const description = isEn
+        ? 'Browse all 114 surahs of the Holy Quran: read online, listen to recitations, and open any surah instantly.'
+        : 'فهرس سور القرآن الكريم كاملًا (١١٤ سورة): اقرأ السورة أونلاين، استمع للتلاوة، وافتح أي سورة بضغطة واحدة.';
+      applyPageSeo({ title, description, route, jsonLd: buildWebPageJsonLd(title, description, route) });
+      return;
+    }
+
     applyPageSeo({
       title: isEn ? 'Page not found | quran.com.ly' : 'الصفحة غير موجودة | quran.com.ly',
       description: isEn
@@ -618,7 +628,8 @@ export default function App() {
     switch (view) {
       case 'surah':
         setMobilePane('list');
-        navigate({ name: 'surah', surahId: selectedSurahId });
+        // صفحة فهرس مستقلة: نقلة مرئية واضحة بدل البقاء في نفس صفحة السورة
+        navigate({ name: 'surahs' });
         break;
       case 'search':
         navigate({ name: 'search' });
@@ -840,7 +851,9 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 min-h-0 flex overflow-hidden">
-        {isStaticPageRoute(route) ? (
+        {route.name === 'surahs' ? (
+          <SurahIndexPage surahs={surahs} onSelectSurah={handleSelectSurah} />
+        ) : isStaticPageRoute(route) ? (
           <>
             {/* الصفحات التعريفية لا تحتاج بيانات القرآن فلا ينتظرها سبينر التحميل */}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">

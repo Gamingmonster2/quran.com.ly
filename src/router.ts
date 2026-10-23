@@ -1,4 +1,4 @@
-/**
+﻿/**
  * موجّه خفيف للموقع (History API) بدون أي مكتبات خارجية.
  * المسارات (عربي):
  *   /                     → قراءة القرآن (تُفتح على سورة الفاتحة)
@@ -19,6 +19,7 @@ export type StaticRouteName = 'about' | 'sources' | 'contact' | 'api';
 
 type RouteBase =
   | { name: 'surah'; surahId: number; ayahId?: number }
+  | { name: 'surahs' }
   | { name: 'search' }
   | { name: 'bookmarks' }
   | { name: 'data' }
@@ -56,6 +57,8 @@ function parseBaseRoute(clean: string): RouteBase {
   switch (clean) {
     case '/':
       return { name: 'surah', surahId: 1 };
+    case '/surahs':
+      return { name: 'surahs' };
     case '/search':
       return { name: 'search' };
     case '/bookmarks':
@@ -95,6 +98,8 @@ function baseRouteToPath(route: Route): string {
         ? `/surah/${route.surahId}/${route.ayahId}`
         : `/surah/${route.surahId}`;
     }
+    case 'surahs':
+      return '/surahs';
     case 'search':
       return '/search';
     case 'bookmarks':
