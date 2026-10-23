@@ -1,0 +1,21 @@
+﻿name: تصحيح نص أو ترجمة
+description: أبلغ عن خطأ في النص القرآني أو الترجمة أو التفسير (مع مصدر)
+title: "[تصحيح]: "
+labels: ["text"]
+body:
+  - type: input
+    id: where
+    attributes: { label: الموضع (سورة/آية) }
+    validations: { required: true }
+  - type: textarea
+    id: current
+    attributes: { label: النص الحالي }
+    validations: { required: true }
+  - type: textarea
+    id: correct
+    attributes: { label: النص الصحيح }
+    validations: { required: true }
+  - type: textarea
+    id: source
+    attributes: { label: المصدر (رابط أو اسم الكتاب/الصفحة) }
+    validations: { required: true }

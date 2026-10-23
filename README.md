@@ -93,3 +93,12 @@ npm run content:words          # تجديد بيانات كلمة-بكلمة
 ## الترخيص
 
 هذا المشروع مرخّص تحت رخصة MIT — راجع ملف [LICENSE](LICENSE).
+
+## المجتمع والمساهمة
+
+- النقاشات والأسئلة: [GitHub Discussions](https://github.com/Gamingmonster2/quran.com.ly/discussions) (يجب تفعيلها من Settings → Features).
+- الأخطاء والاقتراحات: [Issues](https://github.com/Gamingmonster2/quran.com.ly/issues) عبر القوالب الجاهزة.
+- دليل المساهمة: [CONTRIBUTING.md](CONTRIBUTING.md) — وخطة المجتمع: [docs/COMMUNITY.md](docs/COMMUNITY.md).
+- تراخيص البيانات والقيود: [docs/LICENSING.md](docs/LICENSING.md).
+
+> المشروع يقف خلفه فريق عمل من المطورين والمساهمين، ويُدار بالاستعانة بالتقنيات الحديثة والذكاء الاصطناعي ومنصات الوكلاء الأذكياء، مع مراجعة بشرية للمحتوى.

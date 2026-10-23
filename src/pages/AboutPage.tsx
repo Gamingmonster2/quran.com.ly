@@ -1,4 +1,4 @@
-import {
+﻿import {
   BookOpen,
   Bookmark,
   CodeXml,
@@ -230,39 +230,38 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* صاحب المشروع */}
+        {/* فريق المشروع */}
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 text-base sm:text-lg font-bold text-stone-900">
             <span className="w-7 h-7 rounded-lg bg-stone-100 text-stone-700 flex items-center justify-center shrink-0">
               <Heart className="w-4 h-4" aria-hidden="true" />
             </span>
-            صاحب المشروع
+            فريق المشروع
           </h2>
           <div className="flex flex-col sm:flex-row items-start gap-4 rounded-xl border border-stone-200/90 bg-stone-50 p-4 sm:p-5">
             <div className="w-12 h-12 rounded-xl bg-stone-900 text-white flex items-center justify-center shrink-0">
-              <span className="font-quran text-xl">س</span>
+              <span className="font-quran text-xl">فريق</span>
             </div>
             <div className="min-w-0 flex-1">
-              <h3 className="text-base font-bold text-stone-900">سيف الدين</h3>
-              <p className="text-xs text-stone-500 mt-0.5">مبتكر المشروع ومطوّره وصائنه</p>
+              <h3 className="text-base font-bold text-stone-900">فريق مشروع القرآن الكريم</h3>
+              <p className="text-xs text-stone-500 mt-0.5">مجموعة من المطورين والمصممين والمساهمين في خدمة القرآن الكريم</p>
               <p className="text-sm leading-relaxed text-stone-700 mt-2">
-                تولّى صاحب المشروع تصميم الواجهات وتطوير المزايا وتخصيص المشروع وصيانته بعد
-                المرحلة الأولى، وأُطلق الموقع على النطاق{' '}
-                <span dir="ltr" className="font-mono text-[13px]">
-                  quran.com.ly
-                </span>
-                ، وتُدار الشيفرة والإصدارات في مستودع عام على GitHub.
+                مشروع quran.com.ly لا يقف خلفه شخص واحد، بل فريق عمل يشارك في التطوير والتصميم والمراجعة وخدمة
+                المستخدمين. ويُدار المشروع بالاستعانة بالتقنيات الحديثة والذكاء الاصطناعي ومنصات الوكلاء الأذكياء
+                لتسريع التطوير وتحسين الجودة، مع مراجعة بشرية للمحتوى والبيانات، ويبقى الباب مفتوحًا لكل من يريد
+                المساهمة في خدمة كتاب الله.
               </p>
-              <a
-                href="https://github.com/Gamingmonster2/quran.com.ly"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold text-emerald-800 hover:text-emerald-900 transition-colors"
-              >
-                <Github className="w-4 h-4" aria-hidden="true" />
-                <span>مستودع المشروع على GitHub</span>
-                <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-              </a>
+              <div className="mt-3 flex flex-wrap items-center gap-4">
+                <a href="https://github.com/Gamingmonster2/quran.com.ly" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 hover:text-emerald-900 transition-colors">
+                  <Github className="w-4 h-4" aria-hidden="true" />
+                  <span>مستودع المشروع على GitHub</span>
+                  <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+                </a>
+                <a href="https://github.com/Gamingmonster2/quran.com.ly/discussions" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-800 hover:text-emerald-900 transition-colors">
+                  <span>المجتمع والنقاشات</span>
+                  <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+                </a>
+              </div>
             </div>
           </div>
         </section>

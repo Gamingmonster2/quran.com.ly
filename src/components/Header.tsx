@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Download, Languages, Moon, Search, Sun, MoreHorizontal } from 'lucide-react';
 import { ThemeMode, ViewMode } from '../types/quran.ts';
 import { DropdownMenu } from './DropdownMenu.tsx';
