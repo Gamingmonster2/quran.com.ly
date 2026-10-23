@@ -3,6 +3,7 @@ import { Ayah, SurahMeta, SurahWithVerses, Bookmark, ViewMode, ReadingDisplayMod
 import { Header } from './components/Header.tsx';
 import { SurahList } from './components/SurahList.tsx';
 import { ReaderView } from './components/ReaderView.tsx';
+import { HomeHighlights } from './components/HomeHighlights.tsx';
 import { SearchView } from './components/SearchView.tsx';
 import { BookmarksView } from './components/BookmarksView.tsx';
 import { DataInspectorModal } from './components/DataInspectorModal.tsx';
@@ -846,6 +847,17 @@ export default function App() {
                     mobilePane === 'list' ? 'flex' : 'hidden'
                   } md:flex w-full md:w-auto flex-1 md:flex-none flex-col min-h-0 overflow-hidden`}
                 >
+                  {/* لمسات الواجهة (الخطوات 1–3): تدبّر اليوم + تابع القراءة — في الرئيسية فقط */}
+                  {route.name === 'surah' && !route.ayahId && selectedSurahId === 1 && (
+                    <HomeHighlights
+                      surahs={surahs}
+                      bySurahMap={bySurahMap}
+                      progress={readingProgress}
+                      onOpenAyah={handleOpenAyah}
+                      onPlayAyah={handlePlayAyah}
+                      onStartReading={() => handleSelectSurah(1)}
+                    />
+                  )}
                   <SurahList
                     surahs={surahs}
                     selectedSurahId={selectedSurahId}
