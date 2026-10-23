@@ -5,6 +5,7 @@ import { Header } from './components/Header.tsx';
 import { SurahList } from './components/SurahList.tsx';
 import { ReaderView } from './components/ReaderView.tsx';
 import { HomeHighlights } from './components/HomeHighlights.tsx';
+import { DailyVerseStrip } from './components/DailyVerseStrip.tsx';
 import { SearchView } from './components/SearchView.tsx';
 import { BookmarksView } from './components/BookmarksView.tsx';
 import { DataInspectorModal } from './components/DataInspectorModal.tsx';
@@ -821,6 +822,20 @@ export default function App() {
           }}
           onNavigatePage={(page) => navigate({ name: page })}
         />
+
+        {/* شريط «تدبّر اليوم» الرفيع — أعلى فهرس السور (فقط في الصفحة الرئيسية) */}
+        {route.name === 'surah' &&
+          !route.ayahId &&
+          selectedSurahId === 1 &&
+          !isLoading &&
+          !loadError && (
+            <DailyVerseStrip
+              surahs={surahs}
+              bySurahMap={bySurahMap}
+              onOpenAyah={handleOpenAyah}
+              onPlayAyah={handlePlayAyah}
+            />
+          )}
 
       {/* Main Content Area */}
       <main className="flex-1 min-h-0 flex overflow-hidden">
