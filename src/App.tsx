@@ -821,6 +821,7 @@ export default function App() {
             navigate(withLang(route, lang));
           }}
           onNavigatePage={(page) => navigate({ name: page })}
+          relatedSites={PROJECT_SITES}
         />
 
         {/* شريط «تدبّر اليوم» الرفيع — أعلى فهرس السور (فقط في الصفحة الرئيسية) */}
@@ -995,8 +996,14 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer: اسم النطاق والوصف وروابط الصفحات التعريفية */}
-      <footer className="shrink-0 border-t border-stone-200 bg-[#FAF7F0] px-3 py-2 sm:px-4 sm:py-3 font-sans">
+      {/* Footer: يظهر في الرئيسية/الصفحات التعريفية فقط — يُخفى تمامًا في وضع القراءة */}
+      <footer
+        className={`${
+          route.name === 'surah' && !(selectedSurahId === 1 && !route.ayahId)
+            ? 'hidden'
+            : 'shrink-0'
+        } border-t border-stone-200 bg-[#FAF7F0] px-3 py-1 sm:px-4 sm:py-1.5 font-sans`}
+      >
         <div className="hidden sm:flex max-w-7xl mx-auto flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-right">
           <div className="text-xs text-stone-600 leading-relaxed">
             <span className="font-bold text-stone-800">{t('app.title')}</span>

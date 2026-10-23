@@ -25,8 +25,10 @@ interface HeaderProps {
   lang: Lang;
   /** تبديل لغة الواجهة بين العربية والإنجليزية؛ App يتولى حفظها وتغيير اتجاه الصفحة */
   onSwitchLang: (lang: Lang) => void;
-  /** الانتقال إلى الصفحات التعريفية من قائمة «المزيد» المنسدلة */
+  /** الانتقال إلى الصفحات التعريفية من قائمة الخيارات المنسدلة */
   onNavigatePage: (page: 'about' | 'sources' | 'contact' | 'api') => void;
+  /** المواقع المرتبطة (المظلة) — تُعرض داخل قائمة الخيارات */
+  relatedSites: readonly string[];
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -40,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   lang,
   onSwitchLang,
   onNavigatePage,
+  relatedSites,
 }) => {
   const { t } = useI18n();
   const isArabic = lang === 'ar';
@@ -189,20 +192,6 @@ export const Header: React.FC<HeaderProps> = ({
             ))}
           </div>
 
-          {/* قائمة «المزيد» المنسدلة — الصفحات الثانوية لا تُعرض دائمًا */}
-          <DropdownMenu
-            label={t('header.more')}
-            ariaLabel={t('header.more')}
-            icon={<MoreHorizontal aria-hidden="true" className="h-3.5 w-3.5" />}
-            items={[
-              { key: 'about', label: t('footer.about'), onSelect: () => onNavigatePage('about') },
-              { key: 'sources', label: t('footer.sources'), onSelect: () => onNavigatePage('sources') },
-              { key: 'contact', label: t('footer.contact'), onSelect: () => onNavigatePage('contact') },
-              { key: 'api', label: t('footer.api'), onSelect: () => onNavigatePage('api') },
-              { key: 'data', label: t('footer.data'), onSelect: onOpenDataModal },
-            ]}
-          />
-
           {/* فتح لوحة الأوامر والتنقل السريع (Ctrl/Cmd+K) — يظهر فقط إن مرّر App الدالة */}
           {onOpenCommandPalette && (
             <button
@@ -221,16 +210,26 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={onOpenDataModal}
-            title={t('header.download')}
-            aria-label={t('header.download')}
-            className={`inline-flex items-center gap-2 px-2.5 py-1.5 text-xs font-semibold text-white bg-stone-900 rounded-lg hover:bg-stone-800 transition-colors shadow-sm whitespace-nowrap shrink-0 sm:px-3.5 ${FOCUS_RING}`}
-          >
-            <Download className="w-3.5 h-3.5" aria-hidden="true" />
-            <span className="hidden md:inline">{t('header.download')}</span>
-          </button>
+          {/* زر الخيارات (⋯) في أقصى اليسار: كل الأشياء الثانوية هنا بدل عرضها دائمًا */}
+          <DropdownMenu
+            label=""
+            ariaLabel={t('header.options')}
+            icon={<MoreHorizontal aria-hidden="true" className="h-4 w-4" />}
+            showLabel="always"
+            items={[
+              { key: 'download', label: t('header.download'), onSelect: onOpenDataModal },
+              { key: 'about', label: t('footer.about'), onSelect: () => onNavigatePage('about') },
+              { key: 'sources', label: t('footer.sources'), onSelect: () => onNavigatePage('sources') },
+              { key: 'contact', label: t('footer.contact'), onSelect: () => onNavigatePage('contact') },
+              { key: 'api', label: t('footer.api'), onSelect: () => onNavigatePage('api') },
+              { key: 'data', label: t('footer.data'), onSelect: onOpenDataModal },
+              ...relatedSites.map((domain) => ({
+                key: `site-${domain}`,
+                label: domain,
+                onSelect: () => window.open(`https://${domain}`, '_blank', 'noopener'),
+              })),
+            ]}
+          />
         </div>
       </div>
 
