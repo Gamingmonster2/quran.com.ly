@@ -1,6 +1,7 @@
 import React from 'react';
-import { Download, Languages, Moon, Search, Sun } from 'lucide-react';
+import { Download, Languages, Moon, Search, Sun, MoreHorizontal } from 'lucide-react';
 import { ThemeMode, ViewMode } from '../types/quran.ts';
+import { DropdownMenu } from './DropdownMenu.tsx';
 import { LANG_LABELS, useI18n } from '../i18n.tsx';
 import type { Lang } from '../i18n.tsx';
 
@@ -24,6 +25,8 @@ interface HeaderProps {
   lang: Lang;
   /** تبديل لغة الواجهة بين العربية والإنجليزية؛ App يتولى حفظها وتغيير اتجاه الصفحة */
   onSwitchLang: (lang: Lang) => void;
+  /** الانتقال إلى الصفحات التعريفية من قائمة «المزيد» المنسدلة */
+  onNavigatePage: (page: 'about' | 'sources' | 'contact' | 'api') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -36,6 +39,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCommandPalette,
   lang,
   onSwitchLang,
+  onNavigatePage,
 }) => {
   const { t } = useI18n();
   const isArabic = lang === 'ar';
@@ -184,6 +188,20 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             ))}
           </div>
+
+          {/* قائمة «المزيد» المنسدلة — الصفحات الثانوية لا تُعرض دائمًا */}
+          <DropdownMenu
+            label={t('header.more')}
+            ariaLabel={t('header.more')}
+            icon={<MoreHorizontal aria-hidden="true" className="h-3.5 w-3.5" />}
+            items={[
+              { key: 'about', label: t('footer.about'), onSelect: () => onNavigatePage('about') },
+              { key: 'sources', label: t('footer.sources'), onSelect: () => onNavigatePage('sources') },
+              { key: 'contact', label: t('footer.contact'), onSelect: () => onNavigatePage('contact') },
+              { key: 'api', label: t('footer.api'), onSelect: () => onNavigatePage('api') },
+              { key: 'data', label: t('footer.data'), onSelect: onOpenDataModal },
+            ]}
+          />
 
           {/* فتح لوحة الأوامر والتنقل السريع (Ctrl/Cmd+K) — يظهر فقط إن مرّر App الدالة */}
           {onOpenCommandPalette && (
