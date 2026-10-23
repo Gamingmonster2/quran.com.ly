@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Play, Pause, SkipBack, SkipForward, X, Volume2, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Ayah, SurahMeta } from '../types/quran.ts';
 import { toArabicDigits } from '../utils/quranHelpers.ts';
@@ -45,7 +45,7 @@ export const AudioPlayerBar: React.FC<AudioPlayerBarProps> = ({
     <div
       role="region"
       aria-label="مشغل التلاوة الصوتية"
-      className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-stone-200/90 shadow-lg px-4 py-3 sm:px-6"
+      className="fixed bottom-2 left-2 right-2 z-40 rounded-2xl border border-stone-200/90 bg-white/95 px-3 py-2 shadow-2xl backdrop-blur-md sm:bottom-3 sm:left-3 sm:right-auto sm:w-[360px] sm:px-4 sm:py-2.5"
     >
       <div className="max-w-6xl mx-auto flex items-center justify-between gap-3 sm:gap-4">
         {/* Ayah & Surah details */}
