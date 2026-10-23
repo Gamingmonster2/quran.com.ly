@@ -1,4 +1,4 @@
-/**
+﻿/**
  * طبقة التعريب/الترجمة البسيطة للموقع (عربي + إنجليزي).
  * - العربية هي لغة المحتوى الأساسية دائماً (نص القرآن بالرسم العثماني).
  * - الإنجليزية تُترجم واجهة الاستخدام فقط (Chrome) مع مسارات مستقلة `/en/...`.
@@ -48,6 +48,8 @@ const ar: Record<string, string> = {
   'header.more': 'المزيد',
   'header.options': 'خيارات ومواقع',
   'header.language': 'اللغة',
+  'install.title': 'ثبّت التطبيق للقراءة دون اتصال',
+  'install.action': 'تثبيت',
   'theme.group': 'وضع العرض',
   'theme.dark': 'ليلي',
   'theme.beige': 'بيج',
@@ -159,6 +161,8 @@ const en: Record<string, string> = {
   'header.more': 'More',
   'header.options': 'Options & sites',
   'header.language': 'Language',
+  'install.title': 'Install the app for offline reading',
+  'install.action': 'Install',
   'theme.group': 'Display mode',
   'theme.dark': 'Dark',
   'theme.beige': 'Beige',

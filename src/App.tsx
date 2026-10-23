@@ -7,6 +7,7 @@ import { ReaderView } from './components/ReaderView.tsx';
 import { HomeHighlights } from './components/HomeHighlights.tsx';
 import { DailyVerseStrip } from './components/DailyVerseStrip.tsx';
 import { SurahIndexPage } from './components/SurahIndexPage.tsx';
+import { InstallAppPrompt } from './components/InstallAppPrompt.tsx';
 import { SearchView } from './components/SearchView.tsx';
 import { BookmarksView } from './components/BookmarksView.tsx';
 import { DataInspectorModal } from './components/DataInspectorModal.tsx';
@@ -1149,6 +1150,8 @@ export default function App() {
           onClose={() => setIsDataModalOpen(false)}
         />
       )}
+
+      <InstallAppPrompt />
 
       {/* شريط الأوامر (Ctrl/Cmd + K) */}
       <CommandPalette
